@@ -86,24 +86,54 @@ If `docker info` fails, Docker Desktop is installed but the engine is not runnin
 
 ## PostgreSQL 16 Through Docker
 
-Create a local Docker Compose file for PostgreSQL, for example `docker-compose.yml`:
+LoreForge includes a root `docker-compose.yml` for the dev database.
+
+Start the dev database:
+
+```powershell
+docker compose up -d
+```
+
+Reset the dev database and apply all SQL files:
+
+```powershell
+.\scripts\db\reset-dev-db.ps1
+```
+
+Check the dev database:
+
+```powershell
+.\scripts\db\check-db.ps1
+```
+
+The included service uses:
+
+```text
+Host: localhost
+Port: 5432
+Database: loreforge_dev
+Username: postgres
+Password: postgres
+```
+
+Reference compose service:
 
 ```yaml
 services:
   postgres:
     image: postgres:16
-    container_name: loreforge-postgres
+    container_name: loreforge-postgres-dev
     environment:
-      POSTGRES_USER: loreforge
-      POSTGRES_PASSWORD: loreforge
-      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: loreforge_dev
     ports:
-      - "55432:5432"
+      - "5432:5432"
     volumes:
-      - loreforge_pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
 
 volumes:
-  loreforge_pgdata:
+  postgres_data:
 ```
 
 Start PostgreSQL:
@@ -116,14 +146,7 @@ Check the container:
 
 ```powershell
 docker ps
-docker exec loreforge-postgres pg_isready -U loreforge -d postgres
-```
-
-Create a clean test database:
-
-```powershell
-docker exec loreforge-postgres psql -U loreforge -d postgres -c "DROP DATABASE IF EXISTS loreforge_test;"
-docker exec loreforge-postgres psql -U loreforge -d postgres -c "CREATE DATABASE loreforge_test;"
+docker exec loreforge-postgres-dev pg_isready -U postgres -d loreforge_dev
 ```
 
 ## Connect Through DBeaver
@@ -132,15 +155,26 @@ Create a new PostgreSQL connection:
 
 ```text
 Host: localhost
-Port: 55432
-Database: loreforge_test
-Username: loreforge
-Password: loreforge
+Port: 5432
+Database: loreforge_dev
+Username: postgres
+Password: postgres
 ```
 
 Driver: PostgreSQL.
 
 Click **Test Connection**. If DBeaver asks to download the driver, allow it.
+
+If DBeaver connects to a local PostgreSQL server instead of Docker, the PostgreSQL installer probably started the Windows service `postgresql-x64-16` on port `5432`. Stop that service from an Administrator PowerShell, then recreate the Docker container:
+
+```powershell
+Stop-Service postgresql-x64-16
+Set-Service postgresql-x64-16 -StartupType Manual
+docker compose down
+docker compose up -d
+```
+
+You can also keep the local PostgreSQL service running and change the compose host port to `55432:5432`, but then DBeaver must use port `55432`.
 
 ## Apply SQL Files
 
@@ -157,14 +191,14 @@ The first file creates the original schema. The second file upgrades LoreForge a
 If `psql` is installed locally:
 
 ```powershell
-psql "postgresql://loreforge:loreforge@localhost:55432/loreforge_test" -v ON_ERROR_STOP=1 -f "C:\Users\Bogdan\Downloads\dnd_campaign_schema.sql"
+psql "postgresql://postgres:postgres@localhost:5432/loreforge_dev" -v ON_ERROR_STOP=1 -f ".\dnd_campaign_schema.sql"
 ```
 
 If local `psql` is not installed, use the Docker container:
 
 ```powershell
-docker cp "C:\Users\Bogdan\Downloads\dnd_campaign_schema.sql" loreforge-postgres:/tmp/dnd_campaign_schema.sql
-docker exec loreforge-postgres psql -U loreforge -d loreforge_test -v ON_ERROR_STOP=1 -f /tmp/dnd_campaign_schema.sql
+docker cp ".\dnd_campaign_schema.sql" loreforge-postgres-dev:/tmp/dnd_campaign_schema.sql
+docker exec loreforge-postgres-dev psql -U postgres -d loreforge_dev -v ON_ERROR_STOP=1 -f /tmp/dnd_campaign_schema.sql
 ```
 
 ### Apply loreforge_schema_upgrade.sql
@@ -172,14 +206,14 @@ docker exec loreforge-postgres psql -U loreforge -d loreforge_test -v ON_ERROR_S
 Using local `psql`:
 
 ```powershell
-psql "postgresql://loreforge:loreforge@localhost:55432/loreforge_test" -v ON_ERROR_STOP=1 -f "C:\Users\Bogdan\Documents\Codex\2026-06-30\loreforge-rpg-roll20-text-npc-loreforge\outputs\loreforge_schema_upgrade.sql"
+psql "postgresql://postgres:postgres@localhost:5432/loreforge_dev" -v ON_ERROR_STOP=1 -f ".\outputs\loreforge_schema_upgrade.sql"
 ```
 
 Using Docker:
 
 ```powershell
-docker cp "C:\Users\Bogdan\Documents\Codex\2026-06-30\loreforge-rpg-roll20-text-npc-loreforge\outputs\loreforge_schema_upgrade.sql" loreforge-postgres:/tmp/loreforge_schema_upgrade.sql
-docker exec loreforge-postgres psql -U loreforge -d loreforge_test -v ON_ERROR_STOP=1 -f /tmp/loreforge_schema_upgrade.sql
+docker cp ".\outputs\loreforge_schema_upgrade.sql" loreforge-postgres-dev:/tmp/loreforge_schema_upgrade.sql
+docker exec loreforge-postgres-dev psql -U postgres -d loreforge_dev -v ON_ERROR_STOP=1 -f /tmp/loreforge_schema_upgrade.sql
 ```
 
 ### Apply seed_loreforge_demo.sql
@@ -189,14 +223,14 @@ Use this only after the base schema and upgrade migration are applied.
 Using local `psql`:
 
 ```powershell
-psql "postgresql://loreforge:loreforge@localhost:55432/loreforge_test" -v ON_ERROR_STOP=1 -f ".\outputs\seed_loreforge_demo.sql"
+psql "postgresql://postgres:postgres@localhost:5432/loreforge_dev" -v ON_ERROR_STOP=1 -f ".\outputs\seed_loreforge_demo.sql"
 ```
 
 Using Docker:
 
 ```powershell
-docker cp ".\outputs\seed_loreforge_demo.sql" loreforge-postgres:/tmp/seed_loreforge_demo.sql
-docker exec loreforge-postgres psql -U loreforge -d loreforge_test -v ON_ERROR_STOP=1 -f /tmp/seed_loreforge_demo.sql
+docker cp ".\outputs\seed_loreforge_demo.sql" loreforge-postgres-dev:/tmp/seed_loreforge_demo.sql
+docker exec loreforge-postgres-dev psql -U postgres -d loreforge_dev -v ON_ERROR_STOP=1 -f /tmp/seed_loreforge_demo.sql
 ```
 
 ## Useful Verification Queries
@@ -204,25 +238,25 @@ docker exec loreforge-postgres psql -U loreforge -d loreforge_test -v ON_ERROR_S
 List all tables:
 
 ```powershell
-docker exec loreforge-postgres psql -U loreforge -d loreforge_test -c "\dt"
+docker exec loreforge-postgres-dev psql -U postgres -d loreforge_dev -c "\dt"
 ```
 
 Check key upgrade tables:
 
 ```powershell
-docker exec loreforge-postgres psql -U loreforge -d loreforge_test -c "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('session_log','session_event','world_plugin','plugin_feature','campaign_plugin','character_stat','character_resource','ability','character_ability','campaign_invite','gm_note','tag','entity_tag','audit_log') ORDER BY table_name;"
+docker exec loreforge-postgres-dev psql -U postgres -d loreforge_dev -c "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('session_log','session_event','world_plugin','plugin_feature','campaign_plugin','character_stat','character_resource','ability','character_ability','campaign_invite','gm_note','tag','entity_tag','audit_log') ORDER BY table_name;"
 ```
 
 Check `campaign` upgrade columns:
 
 ```powershell
-docker exec loreforge-postgres psql -U loreforge -d loreforge_test -c "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'campaign' AND column_name IN ('status','cover_attachment_id');"
+docker exec loreforge-postgres-dev psql -U postgres -d loreforge_dev -c "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'campaign' AND column_name IN ('status','cover_attachment_id');"
 ```
 
 Check `chat_message` upgrade columns:
 
 ```powershell
-docker exec loreforge-postgres psql -U loreforge -d loreforge_test -c "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'chat_message' AND column_name IN ('message_type','visibility','metadata_json','dice_roll_id');"
+docker exec loreforge-postgres-dev psql -U postgres -d loreforge_dev -c "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'chat_message' AND column_name IN ('message_type','visibility','metadata_json','dice_roll_id');"
 ```
 
 ## Notes
