@@ -49,7 +49,7 @@ winget install --id Docker.DockerDesktop -e
 winget install --id PostgreSQL.PostgreSQL -e
 winget install --id Microsoft.VisualStudioCode -e
 winget install --id Python.Python.3.12 -e
-winget install --id dbeaver.dbeaver -e
+winget install --id DBeaver.DBeaver.Community -e
 ```
 
 Restart PowerShell after installing tools so `PATH` changes are loaded.
@@ -231,4 +231,3 @@ docker exec loreforge-postgres psql -U loreforge -d loreforge_test -c "SELECT co
 - `psql` is useful for local schema checks and CI-like migration testing.
 - DBeaver is optional but convenient for inspecting tables, data, constraints and indexes.
 - Apply schema files to a clean database when testing migrations.
-
