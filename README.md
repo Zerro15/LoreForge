@@ -30,6 +30,10 @@ Read the setup guide:
 docs/dev-environment.md
 ```
 
+## AI agents
+
+Правила работы для Codex и других AI-агентов описаны в `AGENTS.md`.
+
 ## Database
 
 Apply SQL files in this order:
@@ -37,4 +41,3 @@ Apply SQL files in this order:
 1. `dnd_campaign_schema.sql`
 2. `outputs/loreforge_schema_upgrade.sql`
 3. `outputs/seed_loreforge_demo.sql` when the seed file exists
-
