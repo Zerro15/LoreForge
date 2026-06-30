@@ -34,6 +34,10 @@ docs/dev-environment.md
 
 Правила работы для Codex и других AI-агентов описаны в `AGENTS.md`.
 
+## Backend API
+
+Минимальный API и команды запуска описаны в `docs/backend-api.md`.
+
 ## Database
 
 Apply SQL files in this order:

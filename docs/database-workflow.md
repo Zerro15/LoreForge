@@ -24,6 +24,14 @@ Password: postgres
 Port: 5432
 ```
 
+If port `5432` is already used by a local PostgreSQL service, set a local `.env` value before running Docker Compose:
+
+```env
+POSTGRES_PORT=55432
+```
+
+Then connect from host tools through port `55432`.
+
 Start the database without resetting data:
 
 ```powershell
@@ -109,6 +117,8 @@ User: postgres
 Password: postgres
 ```
 
+If `POSTGRES_PORT=55432` is set locally, use port `55432` in DBeaver.
+
 Click **Test Connection**. If DBeaver asks to download the PostgreSQL driver, allow it.
 
 ## ERD in DBeaver
@@ -162,9 +172,8 @@ docker compose up -d
 - stop the other Docker container using port `5432`;
 - change the compose port mapping to another host port, for example:
 
-```yaml
-ports:
-  - "55432:5432"
+```env
+POSTGRES_PORT=55432
 ```
 
 If you change the host port, update DBeaver and local `psql` connection strings accordingly.

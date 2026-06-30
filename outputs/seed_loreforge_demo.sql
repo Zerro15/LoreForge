@@ -91,7 +91,7 @@ ability_seed AS (
         ((SELECT world_plugin_id FROM world_plugin_seed), 'Чутьё опасности', 'Ты замечаешь, когда улица смотрит на тебя не так.', 'passive', '{}'::JSONB, '{}'::JSONB, '{}'::JSONB)
     RETURNING ability_id, name
 ),
-location_seed AS (
+location_city_seed AS (
     INSERT INTO location (
         campaign_id,
         parent_location_id,
@@ -103,21 +103,54 @@ location_seed AS (
         visibility
     )
     VALUES
-        ((SELECT campaign_id FROM campaign_seed), NULL, 'Баклунд', 'city', 'Большой город, где туман скрывает больше, чем грязь и бедность.', NULL, 'Туман держится третью ночь.', 'public'),
-        ((SELECT campaign_id FROM campaign_seed), NULL, 'Восточный район', 'district', 'Рабочие кварталы, дешёвые лавки, подвалы, узкие улицы.', NULL, 'Полиция ходит парами.', 'public'),
-        ((SELECT campaign_id FROM campaign_seed), NULL, 'Аптека Морриса', 'shop', 'Тесная аптека с запахом спирта, трав и старой бумаги.', 'В подвале лежат ингредиенты для зелья и чужие письма.', 'Задняя дверь недавно открывалась.', 'hidden_until_discovered'),
-        ((SELECT campaign_id FROM campaign_seed), NULL, 'Старая часовня', 'chapel', 'Закрытая часовня на краю района. Ночью там горит свет.', 'Под алтарём скрыт проход в ритуальную комнату.', 'Дверь заколочена снаружи.', 'hidden_until_discovered')
+        ((SELECT campaign_id FROM campaign_seed), NULL, 'Баклунд', 'city', 'Большой город, где туман скрывает больше, чем грязь и бедность.', NULL, 'Туман держится третью ночь.', 'public')
     RETURNING location_id, name
 ),
-location_parent_update AS (
-    UPDATE location
-    SET parent_location_id = CASE
-        WHEN name = 'Восточный район' THEN (SELECT location_id FROM location_seed WHERE name = 'Баклунд')
-        WHEN name IN ('Аптека Морриса', 'Старая часовня') THEN (SELECT location_id FROM location_seed WHERE name = 'Восточный район')
-        ELSE parent_location_id
-    END
-    WHERE location_id IN (SELECT location_id FROM location_seed)
-    RETURNING location_id
+location_district_seed AS (
+    INSERT INTO location (
+        campaign_id,
+        parent_location_id,
+        name,
+        location_type,
+        public_description,
+        secret_description,
+        state_text,
+        visibility
+    )
+    VALUES (
+        (SELECT campaign_id FROM campaign_seed),
+        (SELECT location_id FROM location_city_seed WHERE name = 'Баклунд'),
+        'Восточный район',
+        'district',
+        'Рабочие кварталы, дешёвые лавки, подвалы, узкие улицы.',
+        NULL,
+        'Полиция ходит парами.',
+        'public'
+    )
+    RETURNING location_id, name
+),
+location_place_seed AS (
+    INSERT INTO location (
+        campaign_id,
+        parent_location_id,
+        name,
+        location_type,
+        public_description,
+        secret_description,
+        state_text,
+        visibility
+    )
+    VALUES
+        ((SELECT campaign_id FROM campaign_seed), (SELECT location_id FROM location_district_seed WHERE name = 'Восточный район'), 'Аптека Морриса', 'shop', 'Тесная аптека с запахом спирта, трав и старой бумаги.', 'В подвале лежат ингредиенты для зелья и чужие письма.', 'Задняя дверь недавно открывалась.', 'hidden_until_discovered'),
+        ((SELECT campaign_id FROM campaign_seed), (SELECT location_id FROM location_district_seed WHERE name = 'Восточный район'), 'Старая часовня', 'chapel', 'Закрытая часовня на краю района. Ночью там горит свет.', 'Под алтарём скрыт проход в ритуальную комнату.', 'Дверь заколочена снаружи.', 'hidden_until_discovered')
+    RETURNING location_id, name
+),
+location_seed AS (
+    SELECT location_id, name FROM location_city_seed
+    UNION ALL
+    SELECT location_id, name FROM location_district_seed
+    UNION ALL
+    SELECT location_id, name FROM location_place_seed
 ),
 scene_seed AS (
     INSERT INTO scene (
@@ -533,8 +566,8 @@ SELECT
     (SELECT COUNT(*) FROM character_seed) AS characters_created,
     (SELECT COUNT(*) FROM npc_seed) AS npcs_created,
     (SELECT COUNT(*) FROM item_seed) AS items_created,
+    (SELECT COUNT(*) FROM location_seed) AS locations_created,
     (SELECT COUNT(*) FROM session_event_seed) AS session_events_created,
     (SELECT COUNT(*) FROM chat_message_seed) AS chat_messages_created;
 
 COMMIT;
-

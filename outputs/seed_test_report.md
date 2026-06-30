@@ -34,6 +34,7 @@ users_created: 3
 characters_created: 2
 npcs_created: 4
 items_created: 5
+locations_created: 4
 session_events_created: 5
 chat_messages_created: 10
 ```

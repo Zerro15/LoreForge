@@ -110,7 +110,7 @@ The included service uses:
 
 ```text
 Host: localhost
-Port: 5432
+Port: 5432 by default, or POSTGRES_PORT if it is set
 Database: loreforge_dev
 Username: postgres
 Password: postgres
@@ -128,7 +128,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: loreforge_dev
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -155,7 +155,7 @@ Create a new PostgreSQL connection:
 
 ```text
 Host: localhost
-Port: 5432
+Port: 5432 by default, or the value of POSTGRES_PORT
 Database: loreforge_dev
 Username: postgres
 Password: postgres
@@ -174,7 +174,7 @@ docker compose down
 docker compose up -d
 ```
 
-You can also keep the local PostgreSQL service running and change the compose host port to `55432:5432`, but then DBeaver must use port `55432`.
+You can also keep the local PostgreSQL service running and set `POSTGRES_PORT=55432` in your local `.env`, but then DBeaver and local `psql` must use port `55432`.
 
 ## Apply SQL Files
 
