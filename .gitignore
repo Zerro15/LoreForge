@@ -33,3 +33,6 @@ venv/
 
 # Local scratch files
 work/
+
+# Local video artifacts
+outputs/*.mp4
