@@ -10,6 +10,7 @@ import {
   Users
 } from "lucide-react";
 import Link from "next/link";
+import { AuthStatus } from "./AuthStatus";
 import { Badge, Button } from "./ui";
 
 const navItems = [
@@ -107,9 +108,7 @@ export function AppShell({
                 </p>
               ) : null}
             </div>
-            <Button href="/login" variant="secondary">
-              Выйти
-            </Button>
+            <AuthStatus />
           </header>
 
           {children}

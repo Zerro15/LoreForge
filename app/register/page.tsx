@@ -1,6 +1,6 @@
 import { Puzzle, Shield, Sparkles, UsersRound, UserRound } from "lucide-react";
-import { Button, Card } from "@/components/ui";
 import { AuthForm } from "@/components/AuthForm";
+import { Card } from "@/components/ui";
 
 const benefits = [
   {
@@ -20,7 +20,7 @@ const benefits = [
   }
 ];
 
-export default function LoginPage() {
+export default function RegisterPage() {
   return (
     <main className="flex min-h-screen items-center justify-center px-5 py-8">
       <div className="grid w-full max-w-6xl gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
@@ -36,8 +36,8 @@ export default function LoginPage() {
           </div>
 
           <p className="max-w-xl text-xl leading-8 text-[#b7bdc9]">
-            Платформа для ведения RPG-кампаний с подключаемыми мирами и
-            механиками.
+            Создайте аккаунт, чтобы вести кампании, подключать миры и хранить
+            структуру игры в одном месте.
           </p>
 
           <div className="mt-10 space-y-5">
@@ -69,28 +69,13 @@ export default function LoginPage() {
         <Card className="glass rounded-[28px] p-8 md:p-10">
           <div className="mb-8 text-center">
             <Sparkles className="mx-auto mb-5 text-[#8B5CF6]" size={34} />
-            <h2 className="text-3xl font-semibold">Вход</h2>
+            <h2 className="text-3xl font-semibold">Создать аккаунт</h2>
             <p className="mt-2 text-sm text-[#9CA3AF]">
-              Добро пожаловать обратно
+              Начните вести кампанию в LoreForge
             </p>
           </div>
 
-          <AuthForm mode="login" />
-
-          <div className="my-8 flex items-center gap-4 text-xs text-[#6f7787]">
-            <span className="h-px flex-1 bg-[#273244]" />
-            или продолжить с
-            <span className="h-px flex-1 bg-[#273244]" />
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Button variant="secondary">Discord</Button>
-            <Button variant="secondary">Google</Button>
-          </div>
-
-          <div className="mt-8 border-t border-[#273244]/70 pt-6 text-xs leading-5 text-[#6f7787]">
-            Demo credentials: `bogdan@example.com` / `password123`
-          </div>
+          <AuthForm mode="register" />
         </Card>
       </div>
     </main>

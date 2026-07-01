@@ -2,8 +2,8 @@
 
 import { Dices, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { rollDice } from "@/lib/api";
+import { useEffect, useState, useTransition } from "react";
+import { getCurrentUser, rollDice } from "@/lib/api";
 import { DEMO_DICE_USER_ID } from "@/lib/config";
 import { Button, Card } from "./ui";
 
@@ -12,8 +12,25 @@ const quickRolls = ["1d20", "1d100", "2d6"];
 export function DiceQuickRolls({ campaignId }: { campaignId: string }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [pendingFormula, setPendingFormula] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    getCurrentUser().then((result) => {
+      if (!isMounted || !result.data) {
+        return;
+      }
+
+      setCurrentUserId(Number(result.data.user_id));
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   async function roll(formula: string) {
     setError(null);
@@ -21,7 +38,7 @@ export function DiceQuickRolls({ campaignId }: { campaignId: string }) {
 
     try {
       const result = await rollDice(campaignId, {
-        userId: DEMO_DICE_USER_ID,
+        userId: currentUserId ?? DEMO_DICE_USER_ID,
         formula,
         visibility: "public"
       });

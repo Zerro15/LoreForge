@@ -2,6 +2,7 @@ import type {
   CampaignSummary,
   Character,
   ChatMessage,
+  CurrentUser,
   Dashboard,
   Location,
   Npc,
@@ -23,6 +24,7 @@ async function requestApi<T>(
     const response = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
       cache: "no-store",
+      credentials: "include",
       headers: {
         accept: "application/json",
         ...init?.headers
@@ -86,6 +88,40 @@ export function getSessionLog(campaignId: string) {
 
 export function getWorldPlugins() {
   return requestApi<WorldPlugin[]>("/api/world-plugins");
+}
+
+export function register(body: {
+  email: string;
+  password: string;
+  displayName: string;
+}) {
+  return requestApi<CurrentUser>("/api/auth/register", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+export function login(body: { email: string; password: string }) {
+  return requestApi<CurrentUser>("/api/auth/login", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+export function logout() {
+  return requestApi<{ ok: true }>("/api/auth/logout", {
+    method: "POST"
+  });
+}
+
+export function getCurrentUser() {
+  return requestApi<CurrentUser>("/api/auth/me");
 }
 
 export function rollDice(

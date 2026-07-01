@@ -9,6 +9,22 @@ users_seed AS (
         ('alice', 'Alice', 'Player')
     RETURNING user_id, username
 ),
+profiles_seed AS (
+    INSERT INTO user_profile (user_id, full_name, locale, timezone)
+    VALUES
+        ((SELECT user_id FROM users_seed WHERE username = 'bogdan'), 'Bogdan', 'ru', 'Asia/Yekaterinburg'),
+        ((SELECT user_id FROM users_seed WHERE username = 'dima'), 'Dima', 'ru', 'Asia/Yekaterinburg'),
+        ((SELECT user_id FROM users_seed WHERE username = 'alice'), 'Alice', 'ru', 'Asia/Yekaterinburg')
+    RETURNING user_id
+),
+auth_accounts_seed AS (
+    INSERT INTO auth_account (user_id, email, password_hash, is_email_verified, is_active)
+    VALUES
+        ((SELECT user_id FROM users_seed WHERE username = 'bogdan'), 'bogdan@example.com', '$2b$10$PWMYTboyBtYgMQ9FKRQ5bOlBHFCBvQ0aFAFkabCatRBhK52luGEwa', TRUE, TRUE),
+        ((SELECT user_id FROM users_seed WHERE username = 'dima'), 'dima@example.com', '$2b$10$PWMYTboyBtYgMQ9FKRQ5bOlBHFCBvQ0aFAFkabCatRBhK52luGEwa', TRUE, TRUE),
+        ((SELECT user_id FROM users_seed WHERE username = 'alice'), 'alice@example.com', '$2b$10$PWMYTboyBtYgMQ9FKRQ5bOlBHFCBvQ0aFAFkabCatRBhK52luGEwa', TRUE, TRUE)
+    RETURNING auth_account_id
+),
 campaign_seed AS (
     INSERT INTO campaign (
         name,

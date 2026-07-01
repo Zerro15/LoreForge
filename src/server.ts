@@ -1,8 +1,10 @@
 import "dotenv/config";
+import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import Fastify from "fastify";
 import { ZodError } from "zod";
 import { pool } from "./db";
+import { authRoutes } from "./routes/auth";
 import { campaignsRoutes } from "./routes/campaigns";
 import { charactersRoutes } from "./routes/characters";
 import { chatRoutes } from "./routes/chat";
@@ -14,14 +16,21 @@ const app = Fastify({
 });
 
 const corsOrigins = (
-  process.env.CORS_ORIGIN ?? "http://localhost:3000,http://127.0.0.1:3000"
+  process.env.CORS_ORIGIN ??
+  process.env.FRONTEND_URL ??
+  "http://localhost:3000,http://127.0.0.1:3000"
 )
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
 app.register(cors, {
-  origin: corsOrigins
+  origin: corsOrigins,
+  credentials: true
+});
+
+app.register(cookie, {
+  secret: process.env.AUTH_COOKIE_SECRET ?? "dev-cookie-secret-change-me"
 });
 
 app.setErrorHandler((error, _request, reply) => {
@@ -44,6 +53,7 @@ app.get("/health", async () => ({
   service: "loreforge-api"
 }));
 
+app.register(authRoutes);
 app.register(campaignsRoutes);
 app.register(charactersRoutes);
 app.register(chatRoutes);

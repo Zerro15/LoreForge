@@ -19,6 +19,13 @@ export type CampaignSummary = {
   locations_count: number;
 };
 
+export type CurrentUser = {
+  user_id: string;
+  email: string;
+  display_name: string;
+  avatar_url: string | null;
+};
+
 export type Dashboard = {
   campaign: {
     campaign_id: string;
@@ -187,4 +194,3 @@ export type WorldPlugin = {
     description: string | null;
   }>;
 };
-

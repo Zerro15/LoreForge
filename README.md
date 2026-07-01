@@ -151,6 +151,14 @@ DATABASE_URL=postgres://postgres:postgres@127.0.0.1:55432/loreforge_dev
 PORT=3001
 ```
 
+Demo credentials после применения seed:
+
+```text
+bogdan@example.com / password123
+dima@example.com / password123
+alice@example.com / password123
+```
+
 ## Demo flow
 
 Текущий demo flow для проверки продукта описан в [docs/demo-flow.md](docs/demo-flow.md).
@@ -171,6 +179,7 @@ PORT=3001
 
 - `/`
 - `/login`
+- `/register`
 - `/campaigns`
 - `/campaigns/1`
 - `/campaigns/1/characters`
@@ -182,6 +191,10 @@ PORT=3001
 ## API endpoints
 
 - `GET /health`
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- `POST /api/auth/logout`
 - `GET /api/campaigns`
 - `GET /api/campaigns/:campaignId/dashboard`
 - `GET /api/campaigns/:campaignId/characters`
@@ -197,6 +210,7 @@ PORT=3001
 ## Документация
 
 - [docs/development-plan.md](docs/development-plan.md) — план развития продукта.
+- [docs/auth.md](docs/auth.md) — регистрация, login, sessions и cookies.
 - [docs/demo-flow.md](docs/demo-flow.md) — проверочный demo flow.
 - [docs/demo-checklist.md](docs/demo-checklist.md) — чеклист локальной проверки.
 - [docs/pitch.md](docs/pitch.md) — pitch на 30 секунд, 1 минуту и 3 минуты.
@@ -221,6 +235,7 @@ MVP prototype / early product development.
 - Demo seed `outputs/seed_loreforge_demo.sql`.
 - PowerShell scripts для reset/check dev-БД.
 - Fastify backend API.
+- Email/password auth with httpOnly session cookies.
 - Next.js frontend.
 - Dark SaaS UI polish.
 - Demo flow на 2-3 минуты.
