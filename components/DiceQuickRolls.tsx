@@ -3,10 +3,9 @@
 import { Dices, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { rollDice } from "@/lib/api";
+import { DEMO_DICE_USER_ID } from "@/lib/config";
 import { Button, Card } from "./ui";
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 const quickRolls = ["1d20", "1d100", "2d6"];
 
@@ -21,23 +20,14 @@ export function DiceQuickRolls({ campaignId }: { campaignId: string }) {
     setPendingFormula(formula);
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/campaigns/${campaignId}/dice-roll`,
-        {
-          method: "POST",
-          headers: {
-            "content-type": "application/json"
-          },
-          body: JSON.stringify({
-            userId: 1,
-            formula,
-            visibility: "public"
-          })
-        }
-      );
+      const result = await rollDice(campaignId, {
+        userId: DEMO_DICE_USER_ID,
+        formula,
+        visibility: "public"
+      });
 
-      if (!response.ok) {
-        throw new Error(`API вернул ${response.status}`);
+      if (result.error) {
+        throw new Error(result.error);
       }
 
       startTransition(() => router.refresh());
@@ -60,7 +50,7 @@ export function DiceQuickRolls({ campaignId }: { campaignId: string }) {
         </span>
         <div>
           <h2 className="font-semibold">Быстрый бросок</h2>
-          <p className="text-xs text-[#9CA3AF]">Демо-действие попадёт в чат.</p>
+          <p className="text-xs text-[#9CA3AF]">Бросок попадёт в чат.</p>
         </div>
       </div>
       <div className="grid grid-cols-3 gap-2">

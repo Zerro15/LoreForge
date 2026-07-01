@@ -14,6 +14,7 @@ $env:NEXT_PUBLIC_API_URL="http://localhost:3001"
 
 ```text
 NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_DEMO_USER_ID=1
 ```
 
 ## Порядок запуска

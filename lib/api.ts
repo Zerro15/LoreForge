@@ -6,29 +6,41 @@ import type {
   Location,
   Npc,
   SessionLog,
+  Visibility,
   WorldPlugin
 } from "./types";
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+import { API_BASE_URL } from "./config";
 
 export type ApiResult<T> =
   | { data: T; error: null }
   | { data: null; error: string };
 
-async function fetchApi<T>(path: string): Promise<ApiResult<T>> {
+async function requestApi<T>(
+  path: string,
+  init?: RequestInit
+): Promise<ApiResult<T>> {
   try {
     const response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
       cache: "no-store",
       headers: {
-        accept: "application/json"
+        accept: "application/json",
+        ...init?.headers
       }
     });
 
     if (!response.ok) {
+      const fallbackMessage = `API вернул ${response.status} для ${path}`;
+      const contentType = response.headers.get("content-type") ?? "";
+      const payload = contentType.includes("application/json")
+        ? ((await response.json().catch(() => null)) as
+            | { error?: string; message?: string }
+            | null)
+        : null;
+
       return {
         data: null,
-        error: `API вернул ${response.status} для ${path}`
+        error: payload?.error ?? payload?.message ?? fallbackMessage
       };
     }
 
@@ -45,33 +57,51 @@ async function fetchApi<T>(path: string): Promise<ApiResult<T>> {
 }
 
 export function getCampaigns() {
-  return fetchApi<CampaignSummary[]>("/api/campaigns");
+  return requestApi<CampaignSummary[]>("/api/campaigns");
 }
 
 export function getDashboard(campaignId: string) {
-  return fetchApi<Dashboard>(`/api/campaigns/${campaignId}/dashboard`);
+  return requestApi<Dashboard>(`/api/campaigns/${campaignId}/dashboard`);
 }
 
 export function getCharacters(campaignId: string) {
-  return fetchApi<Character[]>(`/api/campaigns/${campaignId}/characters`);
+  return requestApi<Character[]>(`/api/campaigns/${campaignId}/characters`);
 }
 
 export function getNpcs(campaignId: string) {
-  return fetchApi<Npc[]>(`/api/campaigns/${campaignId}/npcs`);
+  return requestApi<Npc[]>(`/api/campaigns/${campaignId}/npcs`);
 }
 
 export function getLocations(campaignId: string) {
-  return fetchApi<Location[]>(`/api/campaigns/${campaignId}/locations`);
+  return requestApi<Location[]>(`/api/campaigns/${campaignId}/locations`);
 }
 
 export function getChat(campaignId: string) {
-  return fetchApi<ChatMessage[]>(`/api/campaigns/${campaignId}/chat`);
+  return requestApi<ChatMessage[]>(`/api/campaigns/${campaignId}/chat`);
 }
 
 export function getSessionLog(campaignId: string) {
-  return fetchApi<SessionLog[]>(`/api/campaigns/${campaignId}/session-log`);
+  return requestApi<SessionLog[]>(`/api/campaigns/${campaignId}/session-log`);
 }
 
 export function getWorldPlugins() {
-  return fetchApi<WorldPlugin[]>("/api/world-plugins");
+  return requestApi<WorldPlugin[]>("/api/world-plugins");
+}
+
+export function rollDice(
+  campaignId: string,
+  body: {
+    userId: number;
+    characterId?: number;
+    formula: string;
+    visibility: Visibility;
+  }
+) {
+  return requestApi<unknown>(`/api/campaigns/${campaignId}/dice-roll`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
 }

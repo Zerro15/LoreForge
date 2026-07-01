@@ -325,7 +325,7 @@ export async function campaignsRoutes(app: FastifyInstance) {
           ) FILTER (WHERE t.tag_id IS NOT NULL),
           '[]'
         ) AS tags,
-        'TODO: add access control before exposing secret fields' AS access_control_todo
+        'Access control is planned for GM-only fields' AS access_control_note
       FROM npc n
       LEFT JOIN entity_tag et ON et.entity_type = 'npc' AND et.entity_id = n.npc_id
       LEFT JOIN tag t ON t.tag_id = et.tag_id
@@ -507,4 +507,3 @@ export async function campaignsRoutes(app: FastifyInstance) {
     return inserted;
   });
 }
-

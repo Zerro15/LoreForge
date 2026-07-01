@@ -153,7 +153,7 @@ PORT=3001
 
 ## Demo flow
 
-Основной сценарий показа описан в [docs/demo-flow.md](docs/demo-flow.md).
+Текущий demo flow для проверки продукта описан в [docs/demo-flow.md](docs/demo-flow.md).
 
 Коротко:
 
@@ -196,8 +196,9 @@ PORT=3001
 
 ## Документация
 
-- [docs/demo-flow.md](docs/demo-flow.md) — сценарий демо.
-- [docs/demo-checklist.md](docs/demo-checklist.md) — чеклист перед показом.
+- [docs/development-plan.md](docs/development-plan.md) — план развития продукта.
+- [docs/demo-flow.md](docs/demo-flow.md) — проверочный demo flow.
+- [docs/demo-checklist.md](docs/demo-checklist.md) — чеклист локальной проверки.
 - [docs/pitch.md](docs/pitch.md) — pitch на 30 секунд, 1 минуту и 3 минуты.
 - [docs/architecture.md](docs/architecture.md) — архитектура.
 - [docs/roadmap.md](docs/roadmap.md) — roadmap.
@@ -208,9 +209,9 @@ PORT=3001
 
 ## Статус проекта
 
-Hackathon demo / MVP prototype.
+MVP prototype / early product development.
 
-Проект уже можно запустить локально и показать end-to-end demo flow: база данных, seed, backend API, frontend dashboard и dice roll работают вместе.
+Проект уже можно запустить локально и пройти end-to-end flow: база данных, seed, backend API, frontend dashboard и dice roll работают вместе. Следующий фокус — стабилизация кодовой базы, auth, роли и CRUD.
 
 ## Что сделано
 
@@ -223,9 +224,11 @@ Hackathon demo / MVP prototype.
 - Next.js frontend.
 - Dark SaaS UI polish.
 - Demo flow на 2-3 минуты.
-- Документация для запуска и презентации.
+- Документация для запуска и развития продукта.
 
-## Что планируется дальше
+## План развития
+
+Подробный план: [docs/development-plan.md](docs/development-plan.md).
 
 - Auth.
 - Roles and access control.

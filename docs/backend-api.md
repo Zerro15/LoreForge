@@ -199,7 +199,7 @@ curl http://localhost:3001/api/campaigns/1/session-log
 curl http://localhost:3001/api/world-plugins
 ```
 
-## TODO
+## Следующие шаги
 
 - Добавить access/visibility service.
 - Добавить auth.
