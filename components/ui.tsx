@@ -11,7 +11,7 @@ export function Card({ className, subtle, ...props }: CardProps) {
   return (
     <section
       className={clsx(
-        "rounded-2xl border border-[#273244]/80 shadow-[0_18px_60px_rgba(0,0,0,0.28)]",
+        "rounded-2xl border border-[#273244]/80 shadow-[0_18px_60px_rgba(0,0,0,0.28)] transition-colors",
         subtle
           ? "bg-[#171A26]/70"
           : "bg-[#111827]/82 backdrop-blur-xl",
@@ -133,12 +133,29 @@ export function PluginBadge({ name }: { name?: string | null }) {
 }
 
 export function ProgressBar({ value }: { value: number }) {
+  return <Meter value={value} tone="purple" />;
+}
+
+export function Meter({
+  value,
+  tone = "purple"
+}: {
+  value: number;
+  tone?: "purple" | "blue" | "green" | "danger" | "gold";
+}) {
   const clamped = Math.max(0, Math.min(100, value));
+  const tones = {
+    purple: "from-[#8B5CF6] to-[#A78BFA]",
+    blue: "from-[#4F8CFF] to-[#9bbcff]",
+    green: "from-[#4FAF7A] to-[#8de0b1]",
+    danger: "from-[#B84A4A] to-[#e89a9a]",
+    gold: "from-[#D6A84F] to-[#f1d38a]"
+  };
 
   return (
     <div className="h-2 overflow-hidden rounded-full bg-[#0B0F17]">
       <div
-        className="h-full rounded-full bg-gradient-to-r from-[#8B5CF6] to-[#D6A84F]"
+        className={clsx("h-full rounded-full bg-gradient-to-r", tones[tone])}
         style={{ width: `${clamped}%` }}
       />
     </div>
@@ -167,10 +184,10 @@ export function ErrorState({ message }: { message: string }) {
   return (
     <Card className="p-8 text-center">
       <div className="mx-auto mb-4 h-2 w-16 rounded-full bg-[#8B5CF6]" />
-      <h2 className="text-xl font-semibold">Данные пока недоступны</h2>
+      <h2 className="text-xl font-semibold">Backend API недоступен</h2>
       <p className="mx-auto mt-2 max-w-xl text-sm text-[#9CA3AF]">{message}</p>
       <p className="mt-4 text-xs text-[#6f7787]">
-        Проверьте, что backend запущен на NEXT_PUBLIC_API_URL.
+        Проверь pnpm dev и NEXT_PUBLIC_API_URL.
       </p>
     </Card>
   );

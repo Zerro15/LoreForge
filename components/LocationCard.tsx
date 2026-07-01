@@ -12,7 +12,7 @@ export function LocationCard({
   const full = location as Location;
 
   return (
-    <Card className="p-5">
+    <Card className="p-5 hover:border-[#8B5CF6]/45">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold">{location.name}</h3>
@@ -27,7 +27,7 @@ export function LocationCard({
         </Badge>
       </div>
 
-      <p className="text-sm leading-6 text-[#c7ccd6]">
+      <p className="line-clamp-3 text-sm leading-6 text-[#c7ccd6]">
         {location.public_description ?? "Описание локации пока пустое."}
       </p>
 

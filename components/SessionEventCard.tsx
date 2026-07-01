@@ -4,7 +4,7 @@ import { Badge, Card } from "./ui";
 
 export function SessionEventCard({ event }: { event: SessionEvent }) {
   return (
-    <Card className="p-4">
+    <Card className="p-4 hover:border-[#8B5CF6]/35">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <ScrollText size={16} className="text-[#A78BFA]" />

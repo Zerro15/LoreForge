@@ -44,19 +44,15 @@ docs/dev-environment.md
 
 Документация по интерфейсу описана в `docs/frontend.md`.
 
-Быстрый запуск:
+Сценарий демонстрации описан в `docs/demo-flow.md`.
+
+Быстрый запуск полного демо:
 
 ```powershell
 docker compose up -d
 .\scripts\db\reset-dev-db.ps1
 pnpm install
-pnpm dev:api
-```
-
-Во втором PowerShell:
-
-```powershell
-pnpm dev:web
+pnpm dev
 ```
 
 Адреса по умолчанию:

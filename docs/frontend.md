@@ -22,13 +22,7 @@ NEXT_PUBLIC_API_URL=http://localhost:3001
 docker compose up -d
 .\scripts\db\reset-dev-db.ps1
 pnpm install
-pnpm dev:api
-```
-
-В другом PowerShell:
-
-```powershell
-pnpm dev:web
+pnpm dev
 ```
 
 После запуска:

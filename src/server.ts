@@ -1,4 +1,5 @@
 import "dotenv/config";
+import cors from "@fastify/cors";
 import Fastify from "fastify";
 import { ZodError } from "zod";
 import { pool } from "./db";
@@ -10,6 +11,17 @@ import { sessionLogsRoutes } from "./routes/sessionLogs";
 
 const app = Fastify({
   logger: true
+});
+
+const corsOrigins = (
+  process.env.CORS_ORIGIN ?? "http://localhost:3000,http://127.0.0.1:3000"
+)
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.register(cors, {
+  origin: corsOrigins
 });
 
 app.setErrorHandler((error, _request, reply) => {
@@ -61,4 +73,3 @@ start().catch((error) => {
   app.log.error(error);
   process.exit(1);
 });
-

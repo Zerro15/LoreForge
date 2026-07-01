@@ -51,7 +51,7 @@ export function AppShell({
 }) {
   return (
     <div className="min-h-screen px-4 py-4 text-[#F5F2EA] md:px-6">
-      <div className="mx-auto grid max-w-[1500px] gap-4 lg:grid-cols-[260px_1fr]">
+      <div className="mx-auto grid max-w-[1500px] gap-5 lg:grid-cols-[260px_1fr]">
         <aside className="glass rounded-3xl p-4 lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)]">
           <Link className="mb-8 flex items-center gap-3" href="/campaigns">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#8B5CF6]/35 bg-[#8B5CF6]/15 text-[#A78BFA] purple-glow">
@@ -71,7 +71,7 @@ export function AppShell({
               const href = resolveHref(item.href, campaignId);
               return (
                 <Link
-                  className="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm text-[#9CA3AF] transition hover:bg-[#171A26] hover:text-[#F5F2EA]"
+                  className="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm text-[#9CA3AF] transition hover:border-[#273244] hover:bg-[#171A26] hover:text-[#F5F2EA]"
                   href={href}
                   key={item.label}
                 >
@@ -92,7 +92,7 @@ export function AppShell({
         </aside>
 
         <main className="min-w-0">
-          <header className="glass mb-4 flex flex-col justify-between gap-4 rounded-3xl px-5 py-4 md:flex-row md:items-center">
+          <header className="glass mb-5 flex flex-col justify-between gap-4 rounded-3xl px-5 py-4 md:flex-row md:items-center">
             <div>
               <div className="mb-1 flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-[#A78BFA]">
                 <BookOpen size={14} />

@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/AppShell";
 import { ChatMessage } from "@/components/ChatMessage";
 import { DiceRollPanel } from "@/components/DiceRollPanel";
+import { DiceQuickRolls } from "@/components/DiceQuickRolls";
 import { Card, EmptyState, ErrorState } from "@/components/ui";
 import { getChat } from "@/lib/api";
 
@@ -30,25 +31,28 @@ export default async function ChatPage({
               <ChatMessage message={message} key={message.message_id} />
             ))}
           </div>
-          <Card className="h-fit p-5">
-            <h2 className="mb-4 text-lg font-semibold">Последние броски</h2>
-            <div className="space-y-3">
-              {rolls.length > 0 ? (
-                rolls.map((message) =>
-                  message.dice_roll ? (
-                    <DiceRollPanel
-                      key={message.dice_roll.roll_id}
-                      roll={message.dice_roll}
-                    />
-                  ) : null
-                )
-              ) : (
-                <p className="text-sm text-[#9CA3AF]">
-                  Бросков в последних сообщениях нет.
-                </p>
-              )}
-            </div>
-          </Card>
+          <div className="space-y-4">
+            <DiceQuickRolls campaignId={campaignId} />
+            <Card className="h-fit p-5">
+              <h2 className="mb-4 text-lg font-semibold">Последние броски</h2>
+              <div className="space-y-3">
+                {rolls.length > 0 ? (
+                  rolls.map((message) =>
+                    message.dice_roll ? (
+                      <DiceRollPanel
+                        key={message.dice_roll.roll_id}
+                        roll={message.dice_roll}
+                      />
+                    ) : null
+                  )
+                ) : (
+                  <p className="text-sm text-[#9CA3AF]">
+                    Бросков в последних сообщениях нет.
+                  </p>
+                )}
+              </div>
+            </Card>
+          </div>
         </div>
       ) : (
         <EmptyState

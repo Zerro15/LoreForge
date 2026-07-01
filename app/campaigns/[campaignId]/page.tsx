@@ -3,6 +3,7 @@ import {
   Crosshair,
   Map,
   MessageSquare,
+  ArrowRight,
   ScrollText,
   Users
 } from "lucide-react";
@@ -13,7 +14,7 @@ import { DiceRollPanel } from "@/components/DiceRollPanel";
 import { LocationCard } from "@/components/LocationCard";
 import { NPCDossierCard } from "@/components/NPCDossierCard";
 import { SessionEventCard } from "@/components/SessionEventCard";
-import { Badge, Card, ErrorState, PluginBadge, StatCard } from "@/components/ui";
+import { Badge, Button, Card, ErrorState, PluginBadge, StatCard } from "@/components/ui";
 import { getDashboard } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +52,24 @@ export default async function CampaignDashboardPage({
                     data.campaign.description ??
                     "Публичный журнал пока пуст."}
                 </p>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <Button href={`/campaigns/${campaignId}/chat`}>
+                    <MessageSquare size={16} />
+                    Открыть чат
+                  </Button>
+                  <Button href={`/campaigns/${campaignId}/characters`} variant="secondary">
+                    <Users size={16} />
+                    Персонажи
+                  </Button>
+                  <Button href={`/campaigns/${campaignId}/npcs`} variant="secondary">
+                    <Bot size={16} />
+                    NPC
+                  </Button>
+                  <Button href={`/campaigns/${campaignId}/session-log`} variant="secondary">
+                    <ScrollText size={16} />
+                    Журнал
+                  </Button>
+                </div>
               </div>
               <Card subtle className="min-w-64 p-4">
                 <div className="text-xs uppercase tracking-[0.16em] text-[#A78BFA]">
@@ -59,7 +78,7 @@ export default async function CampaignDashboardPage({
                 <div className="mt-2 text-xl font-semibold">
                   {data.activePlugin?.name ?? "Core"}
                 </div>
-                <p className="mt-2 text-sm text-[#9CA3AF]">
+                <p className="mt-2 line-clamp-4 text-sm text-[#9CA3AF]">
                   {data.activePlugin?.description ??
                     "Базовые правила кампании."}
                 </p>
@@ -95,7 +114,10 @@ export default async function CampaignDashboardPage({
             <Card className="p-5">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-lg font-semibold">Последние события</h3>
-                <Badge tone="blue">session log</Badge>
+                <Button href={`/campaigns/${campaignId}/session-log`} variant="ghost">
+                  Все события
+                  <ArrowRight size={15} />
+                </Button>
               </div>
               <div className="space-y-3">
                 {data.recentSessionEvents.slice(0, 4).map((event) => (
@@ -151,7 +173,7 @@ export default async function CampaignDashboardPage({
                       <h4 className="font-semibold">{investigation.name}</h4>
                       <Badge tone="orange">{investigation.status}</Badge>
                     </div>
-                    <p className="mt-2 text-sm leading-6 text-[#9CA3AF]">
+                    <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#9CA3AF]">
                       {investigation.description}
                     </p>
                   </Card>

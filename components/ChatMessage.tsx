@@ -1,6 +1,7 @@
 import { MessageSquare, UserRound } from "lucide-react";
 import type { ChatMessage as ChatMessageType } from "@/lib/types";
 import { Badge, Card } from "./ui";
+import { DiceRollPanel } from "./DiceRollPanel";
 
 export function ChatMessage({ message }: { message: ChatMessageType }) {
   const sender =
@@ -13,7 +14,13 @@ export function ChatMessage({ message }: { message: ChatMessageType }) {
     "Система";
 
   return (
-    <Card className="p-4">
+    <Card
+      className={
+        message.message_type === "dice"
+          ? "border-[#D6A84F]/40 bg-[#D6A84F]/8 p-4"
+          : "p-4 hover:border-[#8B5CF6]/35"
+      }
+    >
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm font-medium">
           <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#273244] bg-[#171A26] text-[#A78BFA]">
@@ -35,6 +42,11 @@ export function ChatMessage({ message }: { message: ChatMessageType }) {
         </div>
       </div>
       <p className="text-sm leading-6 text-[#c7ccd6]">{message.content}</p>
+      {message.dice_roll ? (
+        <div className="mt-3">
+          <DiceRollPanel roll={message.dice_roll} />
+        </div>
+      ) : null}
       <div className="mt-3 text-xs text-[#6f7787]">
         {new Date(message.created_at).toLocaleString("ru-RU")}
       </div>

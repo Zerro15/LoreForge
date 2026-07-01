@@ -6,7 +6,7 @@ export function NPCDossierCard({ npc }: { npc: Npc | NpcPreview }) {
   const full = npc as Npc;
 
   return (
-    <Card className="p-5">
+    <Card className="p-5 hover:border-[#8B5CF6]/45">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold">{npc.name}</h3>
@@ -20,7 +20,7 @@ export function NPCDossierCard({ npc }: { npc: Npc | NpcPreview }) {
         </Badge>
       </div>
 
-      <p className="text-sm leading-6 text-[#c7ccd6]">
+      <p className="line-clamp-3 text-sm leading-6 text-[#c7ccd6]">
         {npc.public_description ?? "Публичное описание пока не заполнено."}
       </p>
 
@@ -49,7 +49,7 @@ export function NPCDossierCard({ npc }: { npc: Npc | NpcPreview }) {
 
       {"gm_secrets" in full && full.gm_secrets ? (
         <div className="mt-3">
-          <SecretBlock title="Секрет ГМа / TODO access control">
+          <SecretBlock title="Секрет ГМа">
             {full.gm_secrets}
           </SecretBlock>
         </div>

@@ -53,12 +53,12 @@ export default async function SessionLogPage({
                 </div>
               ) : null}
 
-              <div className="mt-5 grid gap-3 lg:grid-cols-2">
+              <div className="mt-6 space-y-0 border-l border-[#273244] pl-5">
                 {log.events.map((event) => (
-                  <SessionEventCard
-                    event={event}
-                    key={event.session_event_id}
-                  />
+                  <div className="relative pb-4" key={event.session_event_id}>
+                    <span className="absolute -left-[27px] top-4 h-3 w-3 rounded-full border border-[#A78BFA] bg-[#0B0F17] shadow-[0_0_24px_rgba(139,92,246,0.7)]" />
+                    <SessionEventCard event={event} />
+                  </div>
                 ))}
               </div>
             </Card>
