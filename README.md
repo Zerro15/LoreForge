@@ -14,7 +14,9 @@ The current repository contains early architecture artifacts:
 - PostgreSQL migration test report;
 - domain model notes;
 - local Windows development environment check script;
-- developer environment documentation.
+- developer environment documentation;
+- minimal Fastify backend API;
+- Next.js frontend dashboard.
 
 ## Dev Environment
 
@@ -37,6 +39,30 @@ docs/dev-environment.md
 ## Backend API
 
 Минимальный API и команды запуска описаны в `docs/backend-api.md`.
+
+## Frontend
+
+Документация по интерфейсу описана в `docs/frontend.md`.
+
+Быстрый запуск:
+
+```powershell
+docker compose up -d
+.\scripts\db\reset-dev-db.ps1
+pnpm install
+pnpm dev:api
+```
+
+Во втором PowerShell:
+
+```powershell
+pnpm dev:web
+```
+
+Адреса по умолчанию:
+
+- Frontend: `http://localhost:3000`
+- Backend API: `http://localhost:3001`
 
 ## Database
 

@@ -2,22 +2,37 @@
   "name": "loreforge",
   "version": "0.1.0",
   "private": true,
-  "description": "LoreForge backend API and development tooling.",
+  "description": "LoreForge frontend, backend API and development tooling.",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc",
-    "start": "node dist/server.js",
-    "typecheck": "tsc --noEmit"
+    "dev": "next dev",
+    "dev:web": "next dev",
+    "dev:api": "tsx watch src/server.ts",
+    "build": "next build && tsc -p tsconfig.api.json",
+    "build:web": "next build",
+    "build:api": "tsc -p tsconfig.api.json",
+    "start": "next start",
+    "start:api": "node dist/server.js",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.api.json --noEmit"
   },
   "dependencies": {
+    "clsx": "^2.1.1",
     "dotenv": "^17.4.2",
     "fastify": "^5.9.0",
+    "lucide-react": "^1.22.0",
+    "next": "^16.2.9",
     "pg": "^8.22.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.2",
     "@types/node": "^26.0.1",
     "@types/pg": "^8.20.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "postcss": "^8.5.16",
+    "tailwindcss": "^4.3.2",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3"
   }

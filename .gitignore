@@ -14,6 +14,7 @@ temp/
 # Node
 node_modules/
 dist/
+tsconfig.tsbuildinfo
 build/
 .next/
 .nuxt/
@@ -32,4 +33,3 @@ venv/
 
 # Local scratch files
 work/
-
