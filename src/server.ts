@@ -9,7 +9,10 @@ import { authRoutes } from "./routes/auth";
 import { campaignsRoutes } from "./routes/campaigns";
 import { charactersRoutes } from "./routes/characters";
 import { chatRoutes } from "./routes/chat";
+import { dashboardRoutes } from "./routes/dashboard";
+import { diceRoutes } from "./routes/dice";
 import { locationsRoutes } from "./routes/locations";
+import { npcsRoutes } from "./routes/npcs";
 import { pluginsRoutes } from "./routes/plugins";
 import { sessionLogsRoutes } from "./routes/sessionLogs";
 
@@ -76,9 +79,12 @@ app.get("/health", async () => ({
 
 app.register(authRoutes);
 app.register(campaignsRoutes);
+app.register(dashboardRoutes);
 app.register(charactersRoutes);
 app.register(chatRoutes);
+app.register(diceRoutes);
 app.register(locationsRoutes);
+app.register(npcsRoutes);
 app.register(pluginsRoutes);
 app.register(sessionLogsRoutes);
 
