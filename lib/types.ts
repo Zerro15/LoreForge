@@ -10,6 +10,8 @@ export type CampaignSummary = {
   title: string;
   description: string | null;
   status: string;
+  visibility?: "private" | "public";
+  max_players?: number;
   created_at: string;
   updated_at: string;
   active_plugin_name: string | null;

@@ -1,8 +1,34 @@
 import { FastifyInstance } from "fastify";
-import { query } from "../db";
+import { query, withTransaction } from "../db";
+
+async function ensureMistboundPlugin() {
+  await withTransaction(async (client) => {
+    const existing = await client.query(
+      "SELECT world_plugin_id FROM world_plugin WHERE slug = 'mistbound' LIMIT 1"
+    );
+
+    if (existing.rows[0]) {
+      return;
+    }
+
+    await client.query(
+      `
+      INSERT INTO world_plugin (name, slug, description, type)
+      VALUES (
+        'Mistbound',
+        'mistbound',
+        'Пути, последовательности, зелья, духовность и риск потери контроля.',
+        'system'
+      )
+      `
+    );
+  });
+}
 
 export async function pluginsRoutes(app: FastifyInstance) {
   app.get("/api/world-plugins", async () => {
+    await ensureMistboundPlugin();
+
     return query(
       `
       SELECT
@@ -34,4 +60,3 @@ export async function pluginsRoutes(app: FastifyInstance) {
     );
   });
 }
-

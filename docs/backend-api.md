@@ -118,7 +118,7 @@ curl http://localhost:3001/health
 
 ### GET `/api/campaigns`
 
-Возвращает список кампаний с агрегатами:
+Возвращает список кампаний текущего пользователя с агрегатами:
 
 - активный плагин;
 - количество участников;
@@ -127,7 +127,17 @@ curl http://localhost:3001/health
 - количество локаций.
 
 ```powershell
-curl http://localhost:3001/api/campaigns
+curl -b work\cookies.txt http://localhost:3001/api/campaigns
+```
+
+### POST `/api/campaigns`
+
+Создаёт кампанию для текущего пользователя. Пользователь становится `owner`, создаётся `campaign_member`, основной чат и активный `campaign_plugin`.
+
+```powershell
+curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns `
+  -H "Content-Type: application/json" `
+  -d '{"title":"Новая кампания","description":"","visibility":"private","maxPlayers":6,"worldPluginId":1}'
 ```
 
 ### GET `/api/campaigns/:campaignId/dashboard`

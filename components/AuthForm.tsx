@@ -4,7 +4,7 @@ import { ArrowRight, Eye, Lock, Mail, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { login, register } from "@/lib/api";
+import { getCampaigns, login, register } from "@/lib/api";
 import { Button, Input } from "./ui";
 
 type AuthMode = "login" | "register";
@@ -34,7 +34,11 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
       return;
     }
 
-    router.push("/campaigns");
+    const campaigns = await getCampaigns();
+
+    router.push(
+      campaigns.data && campaigns.data.length > 0 ? "/campaigns" : "/onboarding"
+    );
     router.refresh();
   }
 

@@ -63,6 +63,22 @@ export function getCampaigns() {
   return requestApi<CampaignSummary[]>("/api/campaigns");
 }
 
+export function createCampaign(body: {
+  title: string;
+  description?: string | null;
+  visibility: "private" | "public";
+  maxPlayers: number;
+  worldPluginId?: number | null;
+}) {
+  return requestApi<CampaignSummary>("/api/campaigns", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+}
+
 export function getDashboard(campaignId: string) {
   return requestApi<Dashboard>(`/api/campaigns/${campaignId}/dashboard`);
 }

@@ -67,6 +67,12 @@ ALTER TABLE campaign
 ALTER TABLE campaign
     ADD COLUMN IF NOT EXISTS active_location_id BIGINT;
 
+ALTER TABLE campaign
+    ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'private';
+
+ALTER TABLE campaign
+    ADD COLUMN IF NOT EXISTS max_players INTEGER NOT NULL DEFAULT 6;
+
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -95,6 +101,22 @@ BEGIN
             FOREIGN KEY (active_location_id)
             REFERENCES location(location_id)
             ON DELETE SET NULL;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'campaign_visibility_check'
+    ) THEN
+        ALTER TABLE campaign
+            ADD CONSTRAINT campaign_visibility_check
+            CHECK (visibility IN ('private', 'public'));
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'campaign_max_players_check'
+    ) THEN
+        ALTER TABLE campaign
+            ADD CONSTRAINT campaign_max_players_check
+            CHECK (max_players BETWEEN 1 AND 20);
     END IF;
 END $$;
 

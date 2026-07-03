@@ -38,6 +38,7 @@ Backend API: http://localhost:3001
 - `/` - редирект на `/login`;
 - `/login` - вход по email/password;
 - `/register` - регистрация по email/password;
+- `/onboarding` - первый запуск нового ГМа: создание кампании, выбор plugin, стартовая локация;
 - `/campaigns` - список кампаний;
 - `/campaigns/[campaignId]` - игровая комната кампании: активная локация, чат, кубики и запросы переходов;
 - `/campaigns/[campaignId]/characters` - персонажи, характеристики, ресурсы и способности;
@@ -94,6 +95,23 @@ http://localhost:3000/campaigns/1/session-log
 - увидеть результат через обновление данных, чат и журнал.
 
 Подробнее: `docs/location-workflow.md`.
+
+## Onboarding
+
+После `register` и `login` frontend запрашивает `GET /api/campaigns`.
+
+- если у пользователя нет кампаний, он попадает на `/onboarding`;
+- если кампании есть, он попадает на `/campaigns`.
+
+Onboarding состоит из пяти шагов:
+
+1. выбор роли;
+2. настройка кампании;
+3. выбор plugin мира;
+4. стартовая локация;
+5. экран приглашений-заглушка.
+
+Подробнее: `docs/onboarding.md`.
 
 ## Если API недоступен
 
