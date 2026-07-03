@@ -16,7 +16,6 @@ const visibilitySchema = z.enum([
 ]);
 
 const diceRollBodySchema = z.object({
-  userId: z.coerce.number().int().positive(),
   characterId: z.coerce.number().int().positive().optional(),
   formula: z.string().trim().regex(/^\d+d\d+([+-]\d+)?$/i),
   visibility: visibilitySchema.default("public")
@@ -211,4 +210,3 @@ export async function diceRoutes(app: FastifyInstance) {
     return inserted;
   });
 }
-

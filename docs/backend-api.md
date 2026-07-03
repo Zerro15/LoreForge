@@ -371,6 +371,7 @@ curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/chat
 Создает `dice_roll`, создает связанное сообщение чата `message_type = dice` и возвращает результат.
 
 Доступно `owner/gm/co_gm/player`. Роль `viewer` получает `403`.
+Actor user всегда берётся backend-ом из текущей session cookie; `userId` в body не принимается и не нужен.
 
 Поддерживаются простые формулы:
 
@@ -382,7 +383,7 @@ curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/chat
 ```powershell
 curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/dice-roll `
   -H "Content-Type: application/json" `
-  -d '{"userId":2,"characterId":1,"formula":"1d20+3","visibility":"public"}'
+  -d '{"characterId":1,"formula":"1d20+3","visibility":"public"}'
 ```
 
 ### GET `/api/campaigns/:campaignId/session-log`

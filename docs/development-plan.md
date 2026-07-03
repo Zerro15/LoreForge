@@ -4,7 +4,7 @@ LoreForge продолжаем развивать как полноценный 
 
 ## Этап 1 — Stabilization
 
-Цель: привести MVP-код к устойчивой структуре перед добавлением auth и CRUD.
+Цель: привести MVP-код к устойчивой структуре перед следующим крупным CRUD.
 
 - структура проекта;
 - единые frontend/API типы;
@@ -13,7 +13,7 @@ LoreForge продолжаем развивать как полноценный 
 - loading/error states;
 - code cleanup;
 - уменьшение hardcode;
-- подготовка backend route decomposition;
+- backend route decomposition;
 - ревизия документации под продуктовую разработку.
 
 ### Текущая ревизия структуры
@@ -29,14 +29,16 @@ LoreForge продолжаем развивать как полноценный 
 
 ### Найденные технические долги
 
-- `src/routes/campaigns.ts` слишком большой и смешивает dashboard, NPC, locations и dice roll.
-- Секретные поля NPC пока возвращаются backend-ом без access control.
-- Быстрые dice rolls используют временный `NEXT_PUBLIC_DEMO_USER_ID` до появления auth/current user.
+- backend routes нужно держать разделёнными по доменам, чтобы следующий NPC CRUD не раздувал один файл.
+- access checks должны оставаться в `src/access/campaignAccess.ts`, а route-файлы должны использовать общий слой.
+- dice roll actor должен определяться backend-ом по текущей session, без frontend `userId`.
 - UI-компоненты достаточно рабочие для MVP, но позже стоит выделить design tokens и layout primitives.
 
 ## Этап 2 — Auth
 
-Цель: добавить настоящую идентификацию пользователя.
+Статус: базовая email/password auth уже реализована.
+
+Цель следующих доработок: укрепить auth flow и подготовить production-grade session UX.
 
 - регистрация;
 - login;
@@ -47,7 +49,9 @@ LoreForge продолжаем развивать как полноценный 
 
 ## Этап 3 — Roles & Access
 
-Цель: сделать права доступа частью доменной модели кампании.
+Статус: базовый Roles & Access Control уже реализован.
+
+Цель следующих доработок: расширять проверки при добавлении CRUD и новых private сущностей.
 
 - роли `owner`, `gm`, `co_gm`, `player`, `viewer`;
 - проверка `campaign_member`;
@@ -59,6 +63,8 @@ LoreForge продолжаем развивать как полноценный 
 ## Этап 4 — CRUD
 
 Цель: перейти от read-only demo к управлению кампанией из UI.
+
+Следующий крупный фокус: NPC CRUD под роли и visibility.
 
 - создание кампании;
 - редактирование кампании;

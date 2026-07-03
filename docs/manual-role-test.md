@@ -67,7 +67,7 @@ http://localhost:3000/login
 ```powershell
 curl -i -b work\viewer-cookies.txt -X POST http://localhost:3001/api/campaigns/1/dice-roll `
   -H "Content-Type: application/json" `
-  -d '{"userId":1,"formula":"1d20","visibility":"public"}'
+  -d '{"formula":"1d20","visibility":"public"}'
 ```
 
 Ожидаемый результат: `403 Viewer role cannot roll dice`.
@@ -117,4 +117,3 @@ curl -b work\owner-cookies.txt http://localhost:3001/api/campaigns/1/dashboard
   }
 }
 ```
-

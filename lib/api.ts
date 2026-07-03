@@ -328,7 +328,6 @@ export function getCurrentUser() {
 export function rollDice(
   campaignId: string,
   body: {
-    userId: number;
     characterId?: number;
     formula: string;
     visibility: Visibility;
