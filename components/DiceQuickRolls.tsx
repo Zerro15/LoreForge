@@ -9,7 +9,13 @@ import { Button, Card } from "./ui";
 
 const quickRolls = ["1d20", "1d100", "2d6"];
 
-export function DiceQuickRolls({ campaignId }: { campaignId: string }) {
+export function DiceQuickRolls({
+  campaignId,
+  onRolled
+}: {
+  campaignId: string;
+  onRolled?: () => void;
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
@@ -47,6 +53,7 @@ export function DiceQuickRolls({ campaignId }: { campaignId: string }) {
         throw new Error(result.error);
       }
 
+      onRolled?.();
       startTransition(() => router.refresh());
     } catch (rollError) {
       setError(

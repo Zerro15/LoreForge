@@ -64,6 +64,9 @@ ALTER TABLE campaign
 ALTER TABLE campaign
     ADD COLUMN IF NOT EXISTS cover_attachment_id BIGINT;
 
+ALTER TABLE campaign
+    ADD COLUMN IF NOT EXISTS active_location_id BIGINT;
+
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -82,6 +85,115 @@ BEGIN
             FOREIGN KEY (cover_attachment_id)
             REFERENCES attachment(attachment_id)
             ON DELETE SET NULL;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'campaign_active_location_fk'
+    ) THEN
+        ALTER TABLE campaign
+            ADD CONSTRAINT campaign_active_location_fk
+            FOREIGN KEY (active_location_id)
+            REFERENCES location(location_id)
+            ON DELETE SET NULL;
+    END IF;
+END $$;
+
+-- 2.1. Location play-room metadata.
+
+ALTER TABLE location
+    ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+
+ALTER TABLE location
+    ADD COLUMN IF NOT EXISTS is_event_location BOOLEAN NOT NULL DEFAULT FALSE;
+
+ALTER TABLE location
+    ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
+
+ALTER TABLE location
+    ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+
+ALTER TABLE location
+    ADD COLUMN IF NOT EXISTS cover_attachment_id BIGINT;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'location_status_check'
+    ) THEN
+        ALTER TABLE location
+            ADD CONSTRAINT location_status_check
+            CHECK (status IN ('active', 'hidden', 'archived'));
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'location_cover_attachment_fk'
+    ) THEN
+        ALTER TABLE location
+            ADD CONSTRAINT location_cover_attachment_fk
+            FOREIGN KEY (cover_attachment_id)
+            REFERENCES attachment(attachment_id)
+            ON DELETE SET NULL;
+    END IF;
+END $$;
+
+-- 2.2. Local attachment storage for uploaded location images.
+
+ALTER TABLE attachment
+    ADD COLUMN IF NOT EXISTS storage_path TEXT;
+
+ALTER TABLE attachment
+    ADD COLUMN IF NOT EXISTS public_url TEXT;
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'attachment_storage_kind_check'
+    ) THEN
+        ALTER TABLE attachment DROP CONSTRAINT attachment_storage_kind_check;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'attachment_storage_kind_v2_check'
+    ) THEN
+        ALTER TABLE attachment
+            ADD CONSTRAINT attachment_storage_kind_v2_check
+            CHECK (storage_kind IN ('db', 'local'));
+    END IF;
+END $$;
+
+-- 2.3. Player location access lifecycle.
+
+ALTER TABLE player_location_access
+    ADD COLUMN IF NOT EXISTS campaign_id BIGINT;
+
+ALTER TABLE player_location_access
+    ADD COLUMN IF NOT EXISTS granted_by_user_id BIGINT REFERENCES app_user(user_id) ON DELETE SET NULL;
+
+ALTER TABLE player_location_access
+    ADD COLUMN IF NOT EXISTS reason TEXT;
+
+ALTER TABLE player_location_access
+    ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+ALTER TABLE player_location_access
+    ADD COLUMN IF NOT EXISTS revoked_at TIMESTAMPTZ;
+
+UPDATE player_location_access pla
+SET campaign_id = l.campaign_id
+FROM location l
+WHERE pla.location_id = l.location_id
+  AND pla.campaign_id IS NULL;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'player_location_access_campaign_fk'
+    ) THEN
+        ALTER TABLE player_location_access
+            ADD CONSTRAINT player_location_access_campaign_fk
+            FOREIGN KEY (campaign_id)
+            REFERENCES campaign(campaign_id)
+            ON DELETE CASCADE;
     END IF;
 END $$;
 
@@ -320,6 +432,36 @@ BEGIN
         ALTER TABLE campaign_member
             ADD CONSTRAINT campaign_member_role_v2_check
             CHECK (role IN ('owner', 'gm', 'co_gm', 'player', 'viewer'));
+    END IF;
+END $$;
+
+-- 8.1. GM requests for location travel.
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'gm_request_request_type_check'
+    ) THEN
+        ALTER TABLE gm_request DROP CONSTRAINT gm_request_request_type_check;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'gm_request_request_type_v2_check'
+    ) THEN
+        ALTER TABLE gm_request
+            ADD CONSTRAINT gm_request_request_type_v2_check
+            CHECK (
+                request_type IN (
+                    'inventory_add',
+                    'inventory_remove',
+                    'plugin_add',
+                    'plugin_remove',
+                    'action',
+                    'scene_change',
+                    'location_travel',
+                    'custom'
+                )
+            );
     END IF;
 END $$;
 
@@ -593,12 +735,18 @@ CREATE TABLE IF NOT EXISTS audit_log (
 
 CREATE INDEX IF NOT EXISTS idx_campaign_status ON campaign(status);
 CREATE INDEX IF NOT EXISTS idx_campaign_cover_attachment_id ON campaign(cover_attachment_id);
+CREATE INDEX IF NOT EXISTS idx_campaign_active_location_id ON campaign(active_location_id);
 CREATE INDEX IF NOT EXISTS idx_campaign_member_campaign_role ON campaign_member(campaign_id, role);
 
 CREATE INDEX IF NOT EXISTS idx_npc_campaign_visibility ON npc(campaign_id, visibility);
 CREATE INDEX IF NOT EXISTS idx_location_campaign_visibility ON location(campaign_id, visibility);
+CREATE INDEX IF NOT EXISTS idx_location_campaign_status ON location(campaign_id, status);
+CREATE INDEX IF NOT EXISTS idx_location_cover_attachment_id ON location(cover_attachment_id);
+CREATE INDEX IF NOT EXISTS idx_location_event_expires_at ON location(is_event_location, expires_at);
 CREATE INDEX IF NOT EXISTS idx_item_campaign_visibility ON item(campaign_id, visibility);
 CREATE INDEX IF NOT EXISTS idx_attachment_campaign_visibility ON attachment(campaign_id, visibility);
+CREATE INDEX IF NOT EXISTS idx_attachment_campaign_storage ON attachment(campaign_id, storage_kind);
+CREATE INDEX IF NOT EXISTS idx_player_location_access_campaign_user ON player_location_access(campaign_id, user_id, revoked_at);
 CREATE INDEX IF NOT EXISTS idx_chat_message_visibility ON chat_message(visibility, created_at);
 CREATE INDEX IF NOT EXISTS idx_dice_roll_visibility ON dice_roll(visibility, created_at);
 CREATE INDEX IF NOT EXISTS idx_entity_relation_visibility ON entity_relation(campaign_id, visibility);
@@ -639,6 +787,7 @@ CREATE INDEX IF NOT EXISTS idx_chat_message_type ON chat_message(chat_id, messag
 CREATE INDEX IF NOT EXISTS idx_gm_note_campaign_id ON gm_note(campaign_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_gm_note_entity ON gm_note(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_gm_note_visibility ON gm_note(campaign_id, visibility);
+CREATE INDEX IF NOT EXISTS idx_gm_request_location_travel ON gm_request(campaign_id, request_type, status, target_location_id);
 
 CREATE INDEX IF NOT EXISTS idx_tag_campaign_id ON tag(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_entity_tag_campaign_entity ON entity_tag(campaign_id, entity_type, entity_id);

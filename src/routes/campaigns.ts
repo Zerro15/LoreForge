@@ -337,32 +337,6 @@ export async function campaignsRoutes(app: FastifyInstance) {
     );
   });
 
-  app.get("/api/campaigns/:campaignId/locations", async (request) => {
-    const { campaignId } = campaignParamsSchema.parse(request.params);
-
-    return query(
-      `
-      SELECT
-        location_id,
-        parent_location_id,
-        name,
-        location_type,
-        public_description,
-        secret_description,
-        state_text,
-        map_url,
-        grid_enabled,
-        visibility,
-        created_at,
-        updated_at
-      FROM location
-      WHERE campaign_id = $1
-      ORDER BY parent_location_id NULLS FIRST, name
-      `,
-      [campaignId]
-    );
-  });
-
   app.post("/api/campaigns/:campaignId/dice-roll", async (request, reply) => {
     const { campaignId } = campaignParamsSchema.parse(request.params);
     const body = diceRollBodySchema.parse(request.body);

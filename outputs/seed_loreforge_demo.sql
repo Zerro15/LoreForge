@@ -168,6 +168,12 @@ location_seed AS (
     UNION ALL
     SELECT location_id, name FROM location_place_seed
 ),
+active_location_seed AS (
+    UPDATE campaign
+    SET active_location_id = (SELECT location_id FROM location_seed WHERE name = 'Восточный район')
+    WHERE campaign_id = (SELECT campaign_id FROM campaign_seed)
+    RETURNING active_location_id
+),
 scene_seed AS (
     INSERT INTO scene (
         campaign_id,

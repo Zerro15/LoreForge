@@ -181,15 +181,141 @@ curl http://localhost:3001/api/campaigns/1/npcs
 
 ### GET `/api/campaigns/:campaignId/locations`
 
-Возвращает локации:
+Возвращает локации с учётом текущего пользователя:
 
 - `parent_location_id`;
 - публичные описания;
-- секретные описания;
-- visibility.
+- секретные описания для ГМа;
+- `visibility`;
+- `status`;
+- `is_event_location`;
+- `cover_attachment`;
+- `is_active_location`;
+- `has_player_access`.
+
+ГМ, `owner` и `co_gm` видят все локации. Игрок видит публичные локации и локации из `player_location_access`.
 
 ```powershell
-curl http://localhost:3001/api/campaigns/1/locations
+curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/locations
+```
+
+### GET `/api/campaigns/:campaignId/locations/:locationId`
+
+Возвращает одну локацию, картинку, parent и children.
+
+```powershell
+curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/locations/2
+```
+
+### POST `/api/campaigns/:campaignId/locations`
+
+Создаёт локацию. Только для ГМа.
+
+```powershell
+curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/locations `
+  -H "Content-Type: application/json" `
+  -d '{"name":"Таверна у моста","publicDescription":"Шумное место у канала.","secretDescription":"Хозяин работает на культ.","visibility":"hidden_until_discovered","isEventLocation":false}'
+```
+
+### PATCH `/api/campaigns/:campaignId/locations/:locationId`
+
+Редактирует название, описания, visibility, status и event flags. Только для ГМа.
+
+```powershell
+curl -b work\cookies.txt -X PATCH http://localhost:3001/api/campaigns/1/locations/5 `
+  -H "Content-Type: application/json" `
+  -d '{"visibility":"party_only","isEventLocation":true}'
+```
+
+### DELETE `/api/campaigns/:campaignId/locations/:locationId`
+
+Архивирует локацию через `status = archived`, физически не удаляет. Только для ГМа.
+
+```powershell
+curl -b work\cookies.txt -X DELETE http://localhost:3001/api/campaigns/1/locations/5
+```
+
+### POST `/api/campaigns/:campaignId/locations/:locationId/activate`
+
+Меняет активную локацию игровой комнаты. Только для ГМа.
+
+```powershell
+curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/locations/2/activate
+```
+
+### POST `/api/campaigns/:campaignId/locations/:locationId/image`
+
+Загружает картинку локации. Только для ГМа.
+
+Ограничения:
+
+- `image/png`;
+- `image/jpeg`;
+- `image/webp`;
+- до 10 MB;
+- файлы сохраняются локально в `uploads/`.
+
+```powershell
+curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/locations/2/image `
+  -F "file=@C:\path\to\location.jpg"
+```
+
+### POST `/api/campaigns/:campaignId/locations/:locationId/grant-access`
+
+Открывает локацию игроку. Только для ГМа.
+
+```powershell
+curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/locations/3/grant-access `
+  -H "Content-Type: application/json" `
+  -d '{"userId":2,"reason":"Персонаж вошёл в район"}'
+```
+
+### POST `/api/campaigns/:campaignId/locations/:locationId/revoke-access`
+
+Скрывает локацию от игрока через `revoked_at`. Только для ГМа.
+
+```powershell
+curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/locations/3/revoke-access `
+  -H "Content-Type: application/json" `
+  -d '{"userId":2,"reason":"Локация больше недоступна"}'
+```
+
+### POST `/api/campaigns/:campaignId/location-travel-requests`
+
+Игрок отправляет запрос перехода в локацию.
+
+```powershell
+curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/location-travel-requests `
+  -H "Content-Type: application/json" `
+  -d '{"targetLocationId":2,"characterId":1,"message":"Хочу пойти в Восточный район"}'
+```
+
+### GET `/api/campaigns/:campaignId/gm-requests`
+
+ГМ получает pending-запросы игроков.
+
+```powershell
+curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/gm-requests
+```
+
+### POST `/api/campaigns/:campaignId/gm-requests/:requestId/approve`
+
+ГМ одобряет переход. Игрок получает доступ, персонаж переходит в локацию, событие пишется в чат и журнал.
+
+```powershell
+curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/gm-requests/1/approve `
+  -H "Content-Type: application/json" `
+  -d '{"response":"Вы добираетесь до места без происшествий."}'
+```
+
+### POST `/api/campaigns/:campaignId/gm-requests/:requestId/reject`
+
+ГМ отклоняет переход с причиной.
+
+```powershell
+curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/gm-requests/1/reject `
+  -H "Content-Type: application/json" `
+  -d '{"response":"Дорогу перекрыла полиция."}'
 ```
 
 ### GET `/api/campaigns/:campaignId/chat`

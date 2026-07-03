@@ -116,16 +116,44 @@ export type Npc = NpcPreview & {
 
 export type LocationPreview = {
   location_id: string;
+  campaign_id?: string;
   parent_location_id: string | null;
   name: string;
   location_type: string | null;
   public_description: string | null;
   state_text: string | null;
   visibility: Visibility;
+  status?: "active" | "hidden" | "archived";
+  is_event_location?: boolean;
+  expires_at?: string | null;
+  archived_at?: string | null;
+  cover_attachment_id?: string | null;
+  is_active_location?: boolean;
+  has_player_access?: boolean;
+  cover_attachment?: Attachment | null;
 };
 
 export type Location = LocationPreview & {
   secret_description: string | null;
+  children?: Array<{
+    location_id: string;
+    name: string;
+    visibility: Visibility;
+    status: string;
+  }>;
+  parent?: {
+    location_id: string;
+    name: string;
+  } | null;
+};
+
+export type Attachment = {
+  attachment_id: string;
+  filename: string;
+  mime_type: string | null;
+  file_size_bytes: string | number | null;
+  public_url: string | null;
+  metadata?: unknown;
 };
 
 export type DiceRoll = {
@@ -193,4 +221,30 @@ export type WorldPlugin = {
     name: string;
     description: string | null;
   }>;
+};
+
+export type GMRequest = {
+  request_id: string;
+  request_type: string;
+  status: "pending" | "approved" | "rejected" | "cancelled" | "applied";
+  title: string;
+  message: string | null;
+  gm_comment: string | null;
+  created_at: string;
+  resolved_at: string | null;
+  requester: {
+    user_id: string;
+    display_name: string;
+    username: string;
+  };
+  character: {
+    character_id: string;
+    name: string;
+  } | null;
+  target_location: {
+    location_id: string;
+    name: string;
+    visibility: Visibility;
+    status: string;
+  };
 };

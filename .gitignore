@@ -36,3 +36,7 @@ work/
 
 # Local video artifacts
 outputs/*.mp4
+
+# Local uploaded files
+uploads/
+.codex-remote-attachments/

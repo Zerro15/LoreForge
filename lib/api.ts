@@ -4,6 +4,7 @@ import type {
   ChatMessage,
   CurrentUser,
   Dashboard,
+  GMRequest,
   Location,
   Npc,
   SessionLog,
@@ -78,6 +79,132 @@ export function getLocations(campaignId: string) {
   return requestApi<Location[]>(`/api/campaigns/${campaignId}/locations`);
 }
 
+export function getLocation(campaignId: string, locationId: string) {
+  return requestApi<Location>(
+    `/api/campaigns/${campaignId}/locations/${locationId}`
+  );
+}
+
+export function createLocation(
+  campaignId: string,
+  body: {
+    name: string;
+    publicDescription?: string | null;
+    secretDescription?: string | null;
+    parentLocationId?: number | null;
+    visibility: Visibility;
+    locationType?: string | null;
+    stateText?: string | null;
+    isEventLocation?: boolean;
+    expiresAt?: string | null;
+  }
+) {
+  return requestApi<Location>(`/api/campaigns/${campaignId}/locations`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+export function updateLocation(
+  campaignId: string,
+  locationId: string,
+  body: Partial<{
+    name: string;
+    publicDescription: string | null;
+    secretDescription: string | null;
+    parentLocationId: number | null;
+    visibility: Visibility;
+    locationType: string | null;
+    stateText: string | null;
+    isEventLocation: boolean;
+    expiresAt: string | null;
+    status: "active" | "hidden" | "archived";
+  }>
+) {
+  return requestApi<Location>(
+    `/api/campaigns/${campaignId}/locations/${locationId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(body)
+    }
+  );
+}
+
+export function archiveLocation(campaignId: string, locationId: string) {
+  return requestApi<{ ok: true }>(
+    `/api/campaigns/${campaignId}/locations/${locationId}`,
+    {
+      method: "DELETE"
+    }
+  );
+}
+
+export function activateLocation(campaignId: string, locationId: string) {
+  return requestApi<{ ok: true; activeLocationId: string }>(
+    `/api/campaigns/${campaignId}/locations/${locationId}/activate`,
+    {
+      method: "POST"
+    }
+  );
+}
+
+export function uploadLocationImage(
+  campaignId: string,
+  locationId: string,
+  file: File
+) {
+  const body = new FormData();
+  body.append("file", file);
+
+  return requestApi<{ attachment: unknown }>(
+    `/api/campaigns/${campaignId}/locations/${locationId}/image`,
+    {
+      method: "POST",
+      body
+    }
+  );
+}
+
+export function grantLocationAccess(
+  campaignId: string,
+  locationId: string,
+  body: { userId: number; reason?: string | null }
+) {
+  return requestApi<{ ok: true }>(
+    `/api/campaigns/${campaignId}/locations/${locationId}/grant-access`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(body)
+    }
+  );
+}
+
+export function revokeLocationAccess(
+  campaignId: string,
+  locationId: string,
+  body: { userId: number; reason?: string | null }
+) {
+  return requestApi<{ ok: true }>(
+    `/api/campaigns/${campaignId}/locations/${locationId}/revoke-access`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(body)
+    }
+  );
+}
+
 export function getChat(campaignId: string) {
   return requestApi<ChatMessage[]>(`/api/campaigns/${campaignId}/chat`);
 }
@@ -88,6 +215,64 @@ export function getSessionLog(campaignId: string) {
 
 export function getWorldPlugins() {
   return requestApi<WorldPlugin[]>("/api/world-plugins");
+}
+
+export function getGmRequests(campaignId: string) {
+  return requestApi<GMRequest[]>(`/api/campaigns/${campaignId}/gm-requests`);
+}
+
+export function createTravelRequest(
+  campaignId: string,
+  body: {
+    targetLocationId: number;
+    characterId?: number | null;
+    message?: string | null;
+  }
+) {
+  return requestApi<GMRequest>(
+    `/api/campaigns/${campaignId}/location-travel-requests`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(body)
+    }
+  );
+}
+
+export function approveGmRequest(
+  campaignId: string,
+  requestId: string,
+  body: { response?: string | null }
+) {
+  return requestApi<{ ok: true }>(
+    `/api/campaigns/${campaignId}/gm-requests/${requestId}/approve`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(body)
+    }
+  );
+}
+
+export function rejectGmRequest(
+  campaignId: string,
+  requestId: string,
+  body: { response?: string | null }
+) {
+  return requestApi<{ ok: true }>(
+    `/api/campaigns/${campaignId}/gm-requests/${requestId}/reject`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(body)
+    }
+  );
 }
 
 export function register(body: {
