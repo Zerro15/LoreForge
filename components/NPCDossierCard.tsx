@@ -1,8 +1,18 @@
-import { Bot, Tags } from "lucide-react";
+import { Archive, Bot, Edit3, Tags } from "lucide-react";
 import type { Npc, NpcPreview } from "@/lib/types";
-import { Badge, Card, SecretBlock } from "./ui";
+import { Badge, Button, Card, SecretBlock } from "./ui";
 
-export function NPCDossierCard({ npc }: { npc: Npc | NpcPreview }) {
+export function NPCDossierCard({
+  npc,
+  canManage = false,
+  onEdit,
+  onArchive
+}: {
+  npc: Npc | NpcPreview;
+  canManage?: boolean;
+  onEdit?: (npc: Npc) => void;
+  onArchive?: (npc: Npc) => void;
+}) {
   const full = npc as Npc;
 
   return (
@@ -52,6 +62,29 @@ export function NPCDossierCard({ npc }: { npc: Npc | NpcPreview }) {
           <SecretBlock title="Секрет ГМа">
             {full.gm_secrets}
           </SecretBlock>
+        </div>
+      ) : null}
+
+      {canManage && "secret_description" in full ? (
+        <div className="mt-5 flex flex-wrap gap-2 border-t border-[#273244]/70 pt-4">
+          <Button
+            className="min-h-9 px-3"
+            onClick={() => onEdit?.(full)}
+            type="button"
+            variant="secondary"
+          >
+            <Edit3 size={15} />
+            Редактировать
+          </Button>
+          <Button
+            className="min-h-9 px-3"
+            onClick={() => onArchive?.(full)}
+            type="button"
+            variant="danger"
+          >
+            <Archive size={15} />
+            Архивировать
+          </Button>
         </div>
       ) : null}
     </Card>

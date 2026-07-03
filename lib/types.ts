@@ -116,11 +116,14 @@ export type CharacterPreview = Pick<
 
 export type NpcPreview = {
   npc_id: string;
+  campaign_id?: string;
   name: string;
   title: string | null;
   public_description: string | null;
   status_text: string | null;
   visibility: Visibility;
+  status?: "active" | "archived";
+  archived_at?: string | null;
 };
 
 export type Npc = NpcPreview & {
@@ -128,6 +131,15 @@ export type Npc = NpcPreview & {
   gm_secrets: string | null;
   campaign_journal: string | null;
   tags: Array<{ tag_id: number; name: string; color: string | null }>;
+};
+
+export type Tag = {
+  tag_id: number;
+  campaign_id: string;
+  name: string;
+  color: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type LocationPreview = {
