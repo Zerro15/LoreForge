@@ -40,19 +40,24 @@ LoreForge собирает кампанию в единую систему:
 ## Ключевые фичи
 
 - Dark SaaS frontend в стиле dashboard-продукта.
-- Демо-логин без настоящей авторизации.
+- Email/password auth with httpOnly session cookies.
+- Onboarding для первого запуска нового ГМа.
+- Roles & Access Control для `owner/gm/co_gm/player/viewer`.
 - Список кампаний и dashboard кампании.
 - Demo-кампания `Туман над Баклундом`.
 - Активный world plugin `Mistbound`.
+- Play Room: активная локация, чат, кубики и запросы переходов.
 - Карточки персонажей с путём, последовательностью, духовностью, рассудком, усвоением и риском потери контроля.
 - NPC dossier cards с публичным описанием, тегами и `SecretBlock`.
-- Иерархия локаций.
+- Иерархия локаций, загрузка картинки локации и выдача доступа игрокам.
+- Player travel requests и approve/reject flow для ГМа.
 - Чат кампании.
 - Быстрые броски `d20`, `d100`, `2d6`.
 - Dice-сообщения в чате.
 - Timeline-like журнал сессий.
 - PostgreSQL schema, migration и demo seed.
 - Fastify backend API без ORM.
+- GitHub Actions CI проверяет `pnpm typecheck` и `pnpm build` на push/pull request.
 
 ## Чем отличается от Roll20
 
