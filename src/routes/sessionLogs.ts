@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { getCampaignAccess } from "../access/campaignAccess";
 import { query } from "../db";
 
 const campaignParamsSchema = z.object({
@@ -9,6 +10,13 @@ const campaignParamsSchema = z.object({
 export async function sessionLogsRoutes(app: FastifyInstance) {
   app.get("/api/campaigns/:campaignId/session-log", async (request) => {
     const { campaignId } = campaignParamsSchema.parse(request.params);
+    const access = await getCampaignAccess(request, campaignId);
+
+    if (!access) {
+      const error = new Error("Campaign membership required");
+      error.name = "Forbidden";
+      throw error;
+    }
 
     return query(
       `
@@ -16,7 +24,7 @@ export async function sessionLogsRoutes(app: FastifyInstance) {
         sl.session_log_id,
         sl.title,
         sl.summary_public,
-        sl.summary_private,
+        CASE WHEN $2::BOOLEAN THEN sl.summary_private ELSE NULL END AS summary_private,
         sl.session_date,
         sl.visibility,
         sl.created_at,
@@ -45,12 +53,13 @@ export async function sessionLogsRoutes(app: FastifyInstance) {
         ) AS events
         FROM session_event se
         WHERE se.session_log_id = sl.session_log_id
+          AND ($2::BOOLEAN OR se.visibility IN ('public', 'party_only'))
       ) events ON TRUE
       WHERE sl.campaign_id = $1
+        AND ($2::BOOLEAN OR sl.visibility IN ('public', 'party_only'))
       ORDER BY sl.session_date DESC NULLS LAST, sl.created_at DESC
       `,
-      [campaignId]
+      [campaignId, access.permissions.canViewGMSecrets]
     );
   });
 }
-

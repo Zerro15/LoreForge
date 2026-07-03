@@ -749,8 +749,9 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
   const [managerOpen, setManagerOpen] = useState(false);
   const [travelOpen, setTravelOpen] = useState(false);
 
-  const role = getCurrentRole(state);
-  const isGm = isGmRole(role);
+  const permissions = state.dashboard?.currentMember ?? null;
+  const role = permissions?.role ?? getCurrentRole(state);
+  const isGm = Boolean(permissions?.canManageLocations ?? isGmRole(role));
 
   const activeLocation = useMemo(() => {
     return (
@@ -793,12 +794,7 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
       gmRequests: []
     };
 
-    const currentRole =
-      dashboard.data?.members.find(
-        (member) => String(member.user_id) === String(currentUser.data?.user_id)
-      )?.role ?? null;
-
-    if (isGmRole(currentRole)) {
+    if (dashboard.data?.currentMember.canApproveGMRequests) {
       const gmRequests = await getGmRequests(campaignId);
       nextState.gmRequests = gmRequests.data ?? [];
     }
@@ -842,17 +838,17 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
                 </h2>
               </div>
               <div className="flex flex-wrap gap-2">
-                {isGm ? (
+                {permissions?.canManageLocations ? (
                   <Button onClick={() => setManagerOpen(true)} type="button">
                     <MapPinned size={16} />
                     Управление локациями
                   </Button>
-                ) : (
+                ) : permissions?.canCreateTravelRequest ? (
                   <Button onClick={() => setTravelOpen(true)} type="button">
                     <Send size={16} />
                     Запросить переход
                   </Button>
-                )}
+                ) : null}
                 <Button onClick={() => void loadData()} type="button" variant="secondary">
                   <RefreshCw size={16} />
                   Обновить
@@ -897,7 +893,7 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
             </Card>
           </div>
 
-          {isGm ? (
+          {permissions?.canApproveGMRequests ? (
             <GMRequestsPanel
               campaignId={campaignId}
               onResolved={() => void loadData()}
@@ -915,7 +911,15 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
               ))}
             </div>
           </Card>
-          <DiceQuickRolls campaignId={campaignId} onRolled={() => void loadData()} />
+          <DiceQuickRolls
+            campaignId={campaignId}
+            disabledMessage={
+              permissions?.canRollDice
+                ? null
+                : "Режим просмотра: броски недоступны."
+            }
+            onRolled={() => void loadData()}
+          />
         </aside>
       </div>
 
@@ -926,7 +930,7 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
         />
       ) : null}
 
-      {managerOpen ? (
+      {managerOpen && permissions?.canManageLocations ? (
         <LocationManagerModal
           activeLocationId={activeLocation?.location_id}
           campaignId={campaignId}
@@ -937,7 +941,7 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
         />
       ) : null}
 
-      {travelOpen ? (
+      {travelOpen && permissions?.canCreateTravelRequest ? (
         <TravelRequestModal
           campaignId={campaignId}
           characters={state.characters}

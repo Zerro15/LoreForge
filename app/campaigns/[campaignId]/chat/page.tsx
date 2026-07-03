@@ -3,7 +3,7 @@ import { ChatMessage } from "@/components/ChatMessage";
 import { DiceRollPanel } from "@/components/DiceRollPanel";
 import { DiceQuickRolls } from "@/components/DiceQuickRolls";
 import { Card, EmptyState, ErrorState } from "@/components/ui";
-import { getChat } from "@/lib/api";
+import { getChat, getDashboard } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,12 @@ export default async function ChatPage({
   params: Promise<{ campaignId: string }>;
 }) {
   const { campaignId } = await params;
-  const { data, error } = await getChat(campaignId);
+  const [chatResult, dashboardResult] = await Promise.all([
+    getChat(campaignId),
+    getDashboard(campaignId)
+  ]);
+  const { data, error } = chatResult;
+  const canRollDice = dashboardResult.data?.currentMember.canRollDice ?? false;
   const rolls = data?.filter((message) => message.dice_roll).slice(0, 5) ?? [];
 
   return (
@@ -32,7 +37,12 @@ export default async function ChatPage({
             ))}
           </div>
           <div className="space-y-4">
-            <DiceQuickRolls campaignId={campaignId} />
+            <DiceQuickRolls
+              campaignId={campaignId}
+              disabledMessage={
+                canRollDice ? null : "Режим просмотра: броски недоступны."
+              }
+            />
             <Card className="h-fit p-5">
               <h2 className="mb-4 text-lg font-semibold">Последние броски</h2>
               <div className="space-y-3">

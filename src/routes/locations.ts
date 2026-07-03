@@ -5,6 +5,7 @@ import path from "node:path";
 import { FastifyInstance, FastifyRequest } from "fastify";
 import { PoolClient } from "pg";
 import { z } from "zod";
+import { CampaignRole, canCreateTravelRequest } from "../access/campaignAccess";
 import { query, queryOne, withTransaction } from "../db";
 import { getCurrentUserByToken, readSessionToken } from "../auth/session";
 
@@ -61,6 +62,7 @@ const gmResolutionBodySchema = z.object({
 
 const imageMimeTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
 const uploadRoot = path.resolve(process.cwd(), "uploads");
+const campaignRoles = new Set<string>(["owner", "gm", "co_gm", "player", "viewer"]);
 
 type AuthContext = {
   user: {
@@ -343,9 +345,10 @@ export async function locationsRoutes(app: FastifyInstance) {
 
   app.get("/api/campaigns/:campaignId/locations", async (request) => {
     const { campaignId } = campaignParamsSchema.parse(request.params);
-    const auth = await getAuthContext(request, campaignId);
-    const userId = auth?.user.user_id ?? null;
-    const isGm = auth?.isGm ?? false;
+    const auth = requireAuth(await getAuthContext(request, campaignId));
+    const userId = auth.user.user_id;
+    const isGm = auth.isGm;
+    const isViewer = auth.role === "viewer";
 
     return query(
       `
@@ -395,22 +398,24 @@ export async function locationsRoutes(app: FastifyInstance) {
             l.status <> 'archived'
             AND (l.expires_at IS NULL OR l.expires_at > NOW())
             AND (
-              l.visibility IN ('public', 'party_only')
+              l.visibility = 'public'
+              OR ($4::BOOLEAN = FALSE AND l.visibility = 'party_only')
               OR pla.user_id IS NOT NULL
             )
           )
         )
       ORDER BY l.parent_location_id NULLS FIRST, l.name
       `,
-      [campaignId, isGm, userId]
+      [campaignId, isGm, userId, isViewer]
     );
   });
 
   app.get("/api/campaigns/:campaignId/locations/:locationId", async (request, reply) => {
     const { campaignId, locationId } = locationParamsSchema.parse(request.params);
-    const auth = await getAuthContext(request, campaignId);
-    const userId = auth?.user.user_id ?? null;
-    const isGm = auth?.isGm ?? false;
+    const auth = requireAuth(await getAuthContext(request, campaignId));
+    const userId = auth.user.user_id;
+    const isGm = auth.isGm;
+    const isViewer = auth.role === "viewer";
 
     const location = await queryOne(
       `
@@ -483,14 +488,15 @@ export async function locationsRoutes(app: FastifyInstance) {
             l.status <> 'archived'
             AND (l.expires_at IS NULL OR l.expires_at > NOW())
             AND (
-              l.visibility IN ('public', 'party_only')
+              l.visibility = 'public'
+              OR ($5::BOOLEAN = FALSE AND l.visibility = 'party_only')
               OR pla.user_id IS NOT NULL
             )
           )
         )
       GROUP BY l.location_id, c.active_location_id, pla.user_id, p.location_id, a.attachment_id, children.children
       `,
-      [campaignId, locationId, isGm, userId]
+      [campaignId, locationId, isGm, userId, isViewer]
     );
 
     if (!location) {
@@ -882,6 +888,15 @@ export async function locationsRoutes(app: FastifyInstance) {
   app.post("/api/campaigns/:campaignId/location-travel-requests", async (request, reply) => {
     const { campaignId } = campaignParamsSchema.parse(request.params);
     const auth = requireAuth(await getAuthContext(request, campaignId));
+
+    if (
+      !auth.role ||
+      !campaignRoles.has(auth.role) ||
+      !canCreateTravelRequest(auth.role as CampaignRole)
+    ) {
+      return reply.code(403).send({ error: "Only players can create travel requests" });
+    }
+
     const body = travelRequestBodySchema.parse(request.body);
 
     const requestRow = await queryOne(

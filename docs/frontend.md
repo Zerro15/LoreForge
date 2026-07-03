@@ -96,6 +96,22 @@ http://localhost:3000/campaigns/1/session-log
 
 Подробнее: `docs/location-workflow.md`.
 
+## Roles & Access UI
+
+Frontend получает права текущего участника из `GET /api/campaigns/:campaignId/dashboard` в поле `currentMember`.
+
+UI учитывает флаги:
+
+- `canManageLocations` — показывает Location Manager, загрузку картинки, активацию локации, grant/revoke access;
+- `canApproveGMRequests` — показывает панель запросов игроков;
+- `canViewGMSecrets` — позволяет отображать `SecretBlock`, если backend вернул секретные поля;
+- `canRollDice` — включает быстрые броски;
+- `canCreateTravelRequest` — показывает кнопку **Запросить переход**.
+
+Для `viewer` быстрые броски отключаются и показывается подпись `Режим просмотра: броски недоступны`.
+
+Ручная проверка ролей описана в `docs/manual-role-test.md`.
+
 ## Onboarding
 
 После `register` и `login` frontend запрашивает `GET /api/campaigns`.
@@ -125,7 +141,7 @@ Frontend показывает аккуратное error/empty состояни�
 ## Ограничения текущего шага
 
 - OAuth-кнопки Discord и Google декоративные;
-- общий roles/access control пока не реализован полностью;
-- visibility для локаций уже учитывает роль пользователя и `player_location_access`;
+- базовый roles/access control реализован на backend и учитывается в UI;
+- visibility для локаций учитывает роль пользователя и `player_location_access`;
 - регистрации, оплаты, marketplace, WebSocket, карты и drag-and-drop пока нет;
-- секретные поля ГМа отображаются для демо и помечены как зона будущего access control.
+- `SecretBlock` отображается только если backend вернул секретные поля.

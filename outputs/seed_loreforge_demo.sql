@@ -4,6 +4,11 @@ WITH
 users_seed AS (
     INSERT INTO app_user (username, display_name, notes)
     VALUES
+        ('admin_gm', 'Admin GM', 'Role test owner'),
+        ('game_master', 'Game Master', 'Role test GM'),
+        ('co_gm', 'Co GM', 'Role test co-GM'),
+        ('test_player', 'Test Player', 'Role test player'),
+        ('test_viewer', 'Test Viewer', 'Role test viewer'),
         ('bogdan', 'Bogdan', 'GM'),
         ('dima', 'Dima', 'Player'),
         ('alice', 'Alice', 'Player')
@@ -12,6 +17,11 @@ users_seed AS (
 profiles_seed AS (
     INSERT INTO user_profile (user_id, full_name, locale, timezone)
     VALUES
+        ((SELECT user_id FROM users_seed WHERE username = 'admin_gm'), 'Admin GM', 'ru', 'Asia/Yekaterinburg'),
+        ((SELECT user_id FROM users_seed WHERE username = 'game_master'), 'Game Master', 'ru', 'Asia/Yekaterinburg'),
+        ((SELECT user_id FROM users_seed WHERE username = 'co_gm'), 'Co GM', 'ru', 'Asia/Yekaterinburg'),
+        ((SELECT user_id FROM users_seed WHERE username = 'test_player'), 'Test Player', 'ru', 'Asia/Yekaterinburg'),
+        ((SELECT user_id FROM users_seed WHERE username = 'test_viewer'), 'Test Viewer', 'ru', 'Asia/Yekaterinburg'),
         ((SELECT user_id FROM users_seed WHERE username = 'bogdan'), 'Bogdan', 'ru', 'Asia/Yekaterinburg'),
         ((SELECT user_id FROM users_seed WHERE username = 'dima'), 'Dima', 'ru', 'Asia/Yekaterinburg'),
         ((SELECT user_id FROM users_seed WHERE username = 'alice'), 'Alice', 'ru', 'Asia/Yekaterinburg')
@@ -20,6 +30,11 @@ profiles_seed AS (
 auth_accounts_seed AS (
     INSERT INTO auth_account (user_id, email, password_hash, is_email_verified, is_active)
     VALUES
+        ((SELECT user_id FROM users_seed WHERE username = 'admin_gm'), 'admin@loreforge.local', '$2b$10$PWMYTboyBtYgMQ9FKRQ5bOlBHFCBvQ0aFAFkabCatRBhK52luGEwa', TRUE, TRUE),
+        ((SELECT user_id FROM users_seed WHERE username = 'game_master'), 'gm@loreforge.local', '$2b$10$PWMYTboyBtYgMQ9FKRQ5bOlBHFCBvQ0aFAFkabCatRBhK52luGEwa', TRUE, TRUE),
+        ((SELECT user_id FROM users_seed WHERE username = 'co_gm'), 'cogm@loreforge.local', '$2b$10$PWMYTboyBtYgMQ9FKRQ5bOlBHFCBvQ0aFAFkabCatRBhK52luGEwa', TRUE, TRUE),
+        ((SELECT user_id FROM users_seed WHERE username = 'test_player'), 'player@loreforge.local', '$2b$10$PWMYTboyBtYgMQ9FKRQ5bOlBHFCBvQ0aFAFkabCatRBhK52luGEwa', TRUE, TRUE),
+        ((SELECT user_id FROM users_seed WHERE username = 'test_viewer'), 'viewer@loreforge.local', '$2b$10$PWMYTboyBtYgMQ9FKRQ5bOlBHFCBvQ0aFAFkabCatRBhK52luGEwa', TRUE, TRUE),
         ((SELECT user_id FROM users_seed WHERE username = 'bogdan'), 'bogdan@example.com', '$2b$10$PWMYTboyBtYgMQ9FKRQ5bOlBHFCBvQ0aFAFkabCatRBhK52luGEwa', TRUE, TRUE),
         ((SELECT user_id FROM users_seed WHERE username = 'dima'), 'dima@example.com', '$2b$10$PWMYTboyBtYgMQ9FKRQ5bOlBHFCBvQ0aFAFkabCatRBhK52luGEwa', TRUE, TRUE),
         ((SELECT user_id FROM users_seed WHERE username = 'alice'), 'alice@example.com', '$2b$10$PWMYTboyBtYgMQ9FKRQ5bOlBHFCBvQ0aFAFkabCatRBhK52luGEwa', TRUE, TRUE)
@@ -39,7 +54,7 @@ campaign_seed AS (
         'Туман над Баклундом',
         'Mistbound',
         'В Восточном районе Баклунда пропадают рабочие. Следы ведут к аптеке Морриса, старой часовне и людям в серых масках.',
-        (SELECT user_id FROM users_seed WHERE username = 'bogdan'),
+        (SELECT user_id FROM users_seed WHERE username = 'admin_gm'),
         'Дело началось с пропавших рабочих и мокрых следов у аптеки Морриса.',
         'Моррис уже понял, что за ним следят.',
         'active'
@@ -49,7 +64,12 @@ campaign_seed AS (
 members_seed AS (
     INSERT INTO campaign_member (campaign_id, user_id, role)
     VALUES
-        ((SELECT campaign_id FROM campaign_seed), (SELECT user_id FROM users_seed WHERE username = 'bogdan'), 'gm'),
+        ((SELECT campaign_id FROM campaign_seed), (SELECT user_id FROM users_seed WHERE username = 'admin_gm'), 'owner'),
+        ((SELECT campaign_id FROM campaign_seed), (SELECT user_id FROM users_seed WHERE username = 'game_master'), 'gm'),
+        ((SELECT campaign_id FROM campaign_seed), (SELECT user_id FROM users_seed WHERE username = 'co_gm'), 'co_gm'),
+        ((SELECT campaign_id FROM campaign_seed), (SELECT user_id FROM users_seed WHERE username = 'test_player'), 'player'),
+        ((SELECT campaign_id FROM campaign_seed), (SELECT user_id FROM users_seed WHERE username = 'test_viewer'), 'viewer'),
+        ((SELECT campaign_id FROM campaign_seed), (SELECT user_id FROM users_seed WHERE username = 'bogdan'), 'co_gm'),
         ((SELECT campaign_id FROM campaign_seed), (SELECT user_id FROM users_seed WHERE username = 'dima'), 'player'),
         ((SELECT campaign_id FROM campaign_seed), (SELECT user_id FROM users_seed WHERE username = 'alice'), 'player')
     RETURNING campaign_id
@@ -61,7 +81,7 @@ world_plugin_seed AS (
         'mistbound',
         'Пути, последовательности, зелья, духовность и риск потери контроля.',
         'system',
-        (SELECT user_id FROM users_seed WHERE username = 'bogdan')
+        (SELECT user_id FROM users_seed WHERE username = 'admin_gm')
     )
     RETURNING world_plugin_id
 ),

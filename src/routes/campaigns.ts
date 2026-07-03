@@ -1,7 +1,12 @@
 import { FastifyInstance, FastifyRequest } from "fastify";
 import { PoolClient } from "pg";
 import { z } from "zod";
-import { getCurrentUserByToken, readSessionToken } from "../auth/session";
+import {
+  canRollDice,
+  getAuthenticatedUser,
+  getCampaignAccess,
+  requireAuthenticatedUser
+} from "../access/campaignAccess";
 import { query, queryOne, withTransaction } from "../db";
 
 const campaignParamsSchema = z.object({
@@ -65,16 +70,6 @@ function rollDice({ diceCount, diceType, modifier }: DiceFormula) {
   return { rolls, total };
 }
 
-async function getCurrentUser(request: FastifyRequest) {
-  const token = readSessionToken(request);
-
-  if (!token) {
-    return null;
-  }
-
-  return getCurrentUserByToken(token);
-}
-
 async function ensureMistboundPlugin(client: PoolClient) {
   const existing = await client.query<{ world_plugin_id: number }>(
     "SELECT world_plugin_id FROM world_plugin WHERE slug = 'mistbound' LIMIT 1"
@@ -102,11 +97,7 @@ async function ensureMistboundPlugin(client: PoolClient) {
 
 export async function campaignsRoutes(app: FastifyInstance) {
   app.get("/api/campaigns", async (request, reply) => {
-    const currentUser = await getCurrentUser(request);
-
-    if (!currentUser) {
-      return reply.code(401).send({ error: "Not authenticated" });
-    }
+    const currentUser = requireAuthenticatedUser(await getAuthenticatedUser(request));
 
     return query(
       `
@@ -141,11 +132,7 @@ export async function campaignsRoutes(app: FastifyInstance) {
   });
 
   app.post("/api/campaigns", async (request, reply) => {
-    const currentUser = await getCurrentUser(request);
-
-    if (!currentUser) {
-      return reply.code(401).send({ error: "Not authenticated" });
-    }
+    const currentUser = requireAuthenticatedUser(await getAuthenticatedUser(request));
 
     const body = createCampaignBodySchema.parse(request.body);
 
@@ -226,6 +213,11 @@ export async function campaignsRoutes(app: FastifyInstance) {
 
   app.get("/api/campaigns/:campaignId/dashboard", async (request, reply) => {
     const { campaignId } = campaignParamsSchema.parse(request.params);
+    const access = await getCampaignAccess(request, campaignId);
+
+    if (!access) {
+      return reply.code(403).send({ error: "Campaign membership required" });
+    }
 
     const campaign = await queryOne(
       `
@@ -236,13 +228,13 @@ export async function campaignsRoutes(app: FastifyInstance) {
         c.description,
         c.status,
         c.public_journal,
-        c.gm_journal,
+        CASE WHEN $2::BOOLEAN THEN c.gm_journal ELSE NULL END AS gm_journal,
         c.created_at,
         c.updated_at
       FROM campaign c
       WHERE c.campaign_id = $1
       `,
-      [campaignId]
+      [campaignId, access.permissions.canViewGMSecrets]
     );
 
     if (!campaign) {
@@ -332,9 +324,10 @@ export async function campaignsRoutes(app: FastifyInstance) {
           visibility
         FROM npc
         WHERE campaign_id = $1
+          AND ($2::BOOLEAN OR visibility IN ('public', 'party_only'))
         ORDER BY name
         `,
-        [campaignId]
+        [campaignId, access.permissions.canViewGMSecrets]
       ),
       query(
         `
@@ -348,9 +341,17 @@ export async function campaignsRoutes(app: FastifyInstance) {
           visibility
         FROM location
         WHERE campaign_id = $1
+          AND (
+            $2::BOOLEAN
+            OR (
+              status <> 'archived'
+              AND (expires_at IS NULL OR expires_at > NOW())
+              AND visibility IN ('public', 'party_only')
+            )
+          )
         ORDER BY parent_location_id NULLS FIRST, name
         `,
-        [campaignId]
+        [campaignId, access.permissions.canViewGMSecrets]
       ),
       query(
         `
@@ -369,10 +370,21 @@ export async function campaignsRoutes(app: FastifyInstance) {
         LEFT JOIN "character" ch ON ch.character_id = m.sender_character_id
         LEFT JOIN npc n ON n.npc_id = m.sender_npc_id
         WHERE cc.campaign_id = $1
+          AND (
+            $2::BOOLEAN
+            OR m.visibility IN ('public', 'party_only')
+            OR (
+              m.visibility = 'player_only'
+              AND (
+                m.sender_user_id = $3
+                OR m.metadata_json->>'targetUserId' = $4
+              )
+            )
+          )
         ORDER BY m.created_at DESC
         LIMIT 10
         `,
-        [campaignId]
+        [campaignId, access.permissions.canViewGMSecrets, access.user.user_id, String(access.user.user_id)]
       ),
       query(
         `
@@ -386,10 +398,15 @@ export async function campaignsRoutes(app: FastifyInstance) {
           created_at
         FROM dice_roll
         WHERE campaign_id = $1
+          AND (
+            $2::BOOLEAN
+            OR visibility IN ('public', 'party_only')
+            OR (visibility = 'player_only' AND actor_user_id = $3)
+          )
         ORDER BY created_at DESC
         LIMIT 10
         `,
-        [campaignId]
+        [campaignId, access.permissions.canViewGMSecrets, access.user.user_id]
       ),
       query(
         `
@@ -404,10 +421,11 @@ export async function campaignsRoutes(app: FastifyInstance) {
           created_at
         FROM session_event
         WHERE campaign_id = $1
+          AND ($2::BOOLEAN OR visibility IN ('public', 'party_only'))
         ORDER BY created_at DESC
         LIMIT 10
         `,
-        [campaignId]
+        [campaignId, access.permissions.canViewGMSecrets]
       ),
       query(
         `
@@ -419,14 +437,16 @@ export async function campaignsRoutes(app: FastifyInstance) {
           visibility
         FROM investigation
         WHERE campaign_id = $1
+          AND ($2::BOOLEAN OR visibility IN ('public', 'party_only'))
         ORDER BY name
         `,
-        [campaignId]
+        [campaignId, access.permissions.canViewGMSecrets]
       )
     ]);
 
     return {
       campaign,
+      currentMember: access.permissions,
       activePlugin,
       members,
       stats,
@@ -442,6 +462,13 @@ export async function campaignsRoutes(app: FastifyInstance) {
 
   app.get("/api/campaigns/:campaignId/npcs", async (request) => {
     const { campaignId } = campaignParamsSchema.parse(request.params);
+    const access = await getCampaignAccess(request, campaignId);
+
+    if (!access) {
+      const error = new Error("Campaign membership required");
+      error.name = "Forbidden";
+      throw error;
+    }
 
     return query(
       `
@@ -450,9 +477,9 @@ export async function campaignsRoutes(app: FastifyInstance) {
         n.name,
         n.title,
         n.public_description,
-        n.secret_description,
-        n.gm_secrets,
-        n.campaign_journal,
+        CASE WHEN $2::BOOLEAN THEN n.secret_description ELSE NULL END AS secret_description,
+        CASE WHEN $2::BOOLEAN THEN n.gm_secrets ELSE NULL END AS gm_secrets,
+        CASE WHEN $2::BOOLEAN THEN n.campaign_journal ELSE NULL END AS campaign_journal,
         n.status_text,
         n.visibility,
         COALESCE(
@@ -470,15 +497,26 @@ export async function campaignsRoutes(app: FastifyInstance) {
       LEFT JOIN entity_tag et ON et.entity_type = 'npc' AND et.entity_id = n.npc_id
       LEFT JOIN tag t ON t.tag_id = et.tag_id
       WHERE n.campaign_id = $1
+        AND ($2::BOOLEAN OR n.visibility IN ('public', 'party_only'))
       GROUP BY n.npc_id
       ORDER BY n.name
       `,
-      [campaignId]
+      [campaignId, access.permissions.canViewGMSecrets]
     );
   });
 
   app.post("/api/campaigns/:campaignId/dice-roll", async (request, reply) => {
     const { campaignId } = campaignParamsSchema.parse(request.params);
+    const access = await getCampaignAccess(request, campaignId);
+
+    if (!access) {
+      return reply.code(403).send({ error: "Campaign membership required" });
+    }
+
+    if (!canRollDice(access.member.role)) {
+      return reply.code(403).send({ error: "Viewer role cannot roll dice" });
+    }
+
     const body = diceRollBodySchema.parse(request.body);
     const parsedFormula = parseDiceFormula(body.formula);
     const result = rollDice(parsedFormula);
@@ -530,7 +568,7 @@ export async function campaignsRoutes(app: FastifyInstance) {
 
       const user = await client.query<{ display_name: string }>(
         "SELECT display_name FROM app_user WHERE user_id = $1",
-        [body.userId]
+        [access.user.user_id]
       );
 
       if (!user.rows[0]) {
@@ -565,7 +603,7 @@ export async function campaignsRoutes(app: FastifyInstance) {
         [
           campaignId,
           chatId,
-          body.userId,
+          access.user.user_id,
           body.characterId ?? null,
           `${actorName} бросает ${body.formula}.`,
           body.formula,
@@ -598,7 +636,7 @@ export async function campaignsRoutes(app: FastifyInstance) {
         `,
         [
           chatId,
-          body.userId,
+          access.user.user_id,
           body.characterId ?? null,
           `${actorName} бросает ${body.formula}: ${result.total}.`,
           body.visibility,

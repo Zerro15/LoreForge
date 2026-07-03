@@ -144,6 +144,7 @@ curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns `
 
 Возвращает данные для dashboard кампании:
 
+- `currentMember` с ролью и флагами доступа;
 - кампания;
 - активный плагин;
 - участники;
@@ -157,7 +158,22 @@ curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns `
 - расследования.
 
 ```powershell
-curl http://localhost:3001/api/campaigns/1/dashboard
+curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/dashboard
+```
+
+`currentMember`:
+
+```json
+{
+  "role": "owner",
+  "canManageCampaign": true,
+  "canManageLocations": true,
+  "canViewGMSecrets": true,
+  "canApproveGMRequests": true,
+  "canUploadLocationImages": true,
+  "canRollDice": true,
+  "canCreateTravelRequest": false
+}
 ```
 
 ### GET `/api/campaigns/:campaignId/characters`
@@ -170,8 +186,10 @@ curl http://localhost:3001/api/campaigns/1/dashboard
 - resources;
 - abilities.
 
+`secret_description` и `notes` возвращаются только для `owner/gm/co_gm`.
+
 ```powershell
-curl http://localhost:3001/api/campaigns/1/characters
+curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/characters
 ```
 
 ### GET `/api/campaigns/:campaignId/npcs`
@@ -183,10 +201,10 @@ curl http://localhost:3001/api/campaigns/1/characters
 - visibility;
 - tags.
 
-Важно: access control пока не реализован. Секретные поля возвращаются для удобства демо и будущего dashboard. Перед production нужно добавить access/visibility service.
+Секретные поля `secret_description`, `gm_secrets`, `campaign_journal` возвращаются только для `owner/gm/co_gm`. Для `player/viewer` они приходят как `null`, а `gm_only` NPC не попадают в ответ.
 
 ```powershell
-curl http://localhost:3001/api/campaigns/1/npcs
+curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/npcs
 ```
 
 ### GET `/api/campaigns/:campaignId/locations`
@@ -203,7 +221,7 @@ curl http://localhost:3001/api/campaigns/1/npcs
 - `is_active_location`;
 - `has_player_access`.
 
-ГМ, `owner` и `co_gm` видят все локации. Игрок видит публичные локации и локации из `player_location_access`.
+ГМ, `owner` и `co_gm` видят все локации. Игрок видит `public`, `party_only` и локации из `player_location_access`. `viewer` видит только `public`.
 
 ```powershell
 curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/locations
@@ -294,6 +312,8 @@ curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/locations
 
 Игрок отправляет запрос перехода в локацию.
 
+Доступно только роли `player`.
+
 ```powershell
 curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/location-travel-requests `
   -H "Content-Type: application/json" `
@@ -303,6 +323,8 @@ curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/location-
 ### GET `/api/campaigns/:campaignId/gm-requests`
 
 ГМ получает pending-запросы игроков.
+
+Доступно только `owner/gm/co_gm`.
 
 ```powershell
 curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/gm-requests
@@ -338,13 +360,17 @@ curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/gm-reques
 - visibility;
 - dice roll, если сообщение связано с броском.
 
+`gm_only` сообщения не возвращаются игрокам и viewer. `player_only` возвращаются отправителю или получателю из `metadata_json.targetUserId`.
+
 ```powershell
-curl http://localhost:3001/api/campaigns/1/chat
+curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/chat
 ```
 
 ### POST `/api/campaigns/:campaignId/dice-roll`
 
 Создает `dice_roll`, создает связанное сообщение чата `message_type = dice` и возвращает результат.
+
+Доступно `owner/gm/co_gm/player`. Роль `viewer` получает `403`.
 
 Поддерживаются простые формулы:
 
@@ -354,7 +380,7 @@ curl http://localhost:3001/api/campaigns/1/chat
 - `1d100`.
 
 ```powershell
-curl -X POST http://localhost:3001/api/campaigns/1/dice-roll `
+curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/dice-roll `
   -H "Content-Type: application/json" `
   -d '{"userId":2,"characterId":1,"formula":"1d20+3","visibility":"public"}'
 ```
@@ -363,8 +389,10 @@ curl -X POST http://localhost:3001/api/campaigns/1/dice-roll `
 
 Возвращает журналы сессий и события.
 
+`summary_private` и `gm_only` события возвращаются только `owner/gm/co_gm`.
+
 ```powershell
-curl http://localhost:3001/api/campaigns/1/session-log
+curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/session-log
 ```
 
 ### GET `/api/world-plugins`
@@ -377,7 +405,7 @@ curl http://localhost:3001/api/world-plugins
 
 ## Следующие шаги
 
-- Добавить access/visibility service.
-- Добавить auth.
+- Расширить access/visibility service на будущие CRUD endpoints.
+- Добавить полноценные permissions для `gm_note`, когда появится отдельный API.
 - Добавить нормальные DTO для frontend-слоя, когда появятся экраны.
 - Добавить тесты API после стабилизации контрактов.

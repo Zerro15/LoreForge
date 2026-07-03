@@ -154,6 +154,11 @@ PORT=3001
 Demo credentials после применения seed:
 
 ```text
+admin@loreforge.local / password123      # owner
+gm@loreforge.local / password123         # gm
+cogm@loreforge.local / password123       # co_gm
+player@loreforge.local / password123     # player
+viewer@loreforge.local / password123     # viewer
 bogdan@example.com / password123
 dima@example.com / password123
 alice@example.com / password123
@@ -218,6 +223,8 @@ alice@example.com / password123
 - [docs/roadmap.md](docs/roadmap.md) — roadmap.
 - [docs/frontend.md](docs/frontend.md) — frontend.
 - [docs/backend-api.md](docs/backend-api.md) — backend API.
+- [docs/access-control.md](docs/access-control.md) — роли и права доступа.
+- [docs/manual-role-test.md](docs/manual-role-test.md) — ручная проверка ролей.
 - [docs/database-workflow.md](docs/database-workflow.md) — workflow БД.
 - [docs/dev-environment.md](docs/dev-environment.md) — локальное окружение.
 
@@ -225,7 +232,7 @@ alice@example.com / password123
 
 MVP prototype / early product development.
 
-Проект уже можно запустить локально и пройти end-to-end flow: база данных, seed, backend API, frontend dashboard и dice roll работают вместе. Следующий фокус — стабилизация кодовой базы, auth, роли и CRUD.
+Проект уже можно запустить локально и пройти end-to-end flow: база данных, seed, backend API, frontend dashboard, auth, базовые роли, visibility и dice roll работают вместе. Следующий фокус — CRUD и углубление permissions.
 
 ## Что сделано
 
@@ -236,6 +243,8 @@ MVP prototype / early product development.
 - PowerShell scripts для reset/check dev-БД.
 - Fastify backend API.
 - Email/password auth with httpOnly session cookies.
+- Базовый Roles & Access Control для `owner/gm/co_gm/player/viewer`.
+- Маскирование GM secrets для player/viewer.
 - Next.js frontend.
 - Dark SaaS UI polish.
 - Demo flow на 2-3 минуты.
@@ -245,9 +254,8 @@ MVP prototype / early product development.
 
 Подробный план: [docs/development-plan.md](docs/development-plan.md).
 
-- Auth.
-- Roles and access control.
-- Реальные права доступа для `SecretBlock`.
+- CRUD кампаний, персонажей, NPC и локаций.
+- Более детальные права доступа для `SecretBlock` и `gm_note`.
 - WebSocket chat.
 - Campaign editor.
 - Plugin constructor.

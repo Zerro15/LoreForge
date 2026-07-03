@@ -28,6 +28,19 @@ export type CurrentUser = {
   avatar_url: string | null;
 };
 
+export type CampaignRole = "owner" | "gm" | "co_gm" | "player" | "viewer";
+
+export type CurrentMemberPermissions = {
+  role: CampaignRole;
+  canManageCampaign: boolean;
+  canManageLocations: boolean;
+  canViewGMSecrets: boolean;
+  canApproveGMRequests: boolean;
+  canUploadLocationImages: boolean;
+  canRollDice: boolean;
+  canCreateTravelRequest: boolean;
+};
+
 export type Dashboard = {
   campaign: {
     campaign_id: string;
@@ -43,6 +56,7 @@ export type Dashboard = {
     slug: string;
     description: string | null;
   } | null;
+  currentMember: CurrentMemberPermissions;
   members: Array<{
     user_id: string;
     username: string;

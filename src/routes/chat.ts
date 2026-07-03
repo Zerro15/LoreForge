@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { getCampaignAccess } from "../access/campaignAccess";
 import { query } from "../db";
 
 const campaignParamsSchema = z.object({
@@ -9,6 +10,13 @@ const campaignParamsSchema = z.object({
 export async function chatRoutes(app: FastifyInstance) {
   app.get("/api/campaigns/:campaignId/chat", async (request) => {
     const { campaignId } = campaignParamsSchema.parse(request.params);
+    const access = await getCampaignAccess(request, campaignId);
+
+    if (!access) {
+      const error = new Error("Campaign membership required");
+      error.name = "Forbidden";
+      throw error;
+    }
 
     return query(
       `
@@ -49,11 +57,21 @@ export async function chatRoutes(app: FastifyInstance) {
       LEFT JOIN npc n ON n.npc_id = m.sender_npc_id
       LEFT JOIN dice_roll dr ON dr.roll_id = m.dice_roll_id
       WHERE cc.campaign_id = $1
+        AND (
+          $2::BOOLEAN
+          OR m.visibility IN ('public', 'party_only')
+          OR (
+            m.visibility = 'player_only'
+            AND (
+              m.sender_user_id = $3
+              OR m.metadata_json->>'targetUserId' = $4
+            )
+          )
+        )
       ORDER BY m.created_at DESC
       LIMIT 50
       `,
-      [campaignId]
+      [campaignId, access.permissions.canViewGMSecrets, access.user.user_id, String(access.user.user_id)]
     );
   });
 }
-

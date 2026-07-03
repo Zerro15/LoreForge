@@ -11,9 +11,11 @@ const quickRolls = ["1d20", "1d100", "2d6"];
 
 export function DiceQuickRolls({
   campaignId,
+  disabledMessage,
   onRolled
 }: {
   campaignId: string;
+  disabledMessage?: string | null;
   onRolled?: () => void;
 }) {
   const router = useRouter();
@@ -81,7 +83,7 @@ export function DiceQuickRolls({
         {quickRolls.map((formula) => (
           <Button
             className="min-h-10 px-3"
-            disabled={Boolean(pendingFormula) || isPending}
+            disabled={Boolean(disabledMessage) || Boolean(pendingFormula) || isPending}
             key={formula}
             onClick={() => roll(formula)}
             type="button"
@@ -91,6 +93,9 @@ export function DiceQuickRolls({
           </Button>
         ))}
       </div>
+      {disabledMessage ? (
+        <p className="mt-3 text-xs text-[#9CA3AF]">{disabledMessage}</p>
+      ) : null}
       {error ? <p className="mt-3 text-xs text-[#e89a9a]">{error}</p> : null}
     </Card>
   );

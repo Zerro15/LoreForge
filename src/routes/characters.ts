@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { getCampaignAccess } from "../access/campaignAccess";
 import { query } from "../db";
 
 const campaignParamsSchema = z.object({
@@ -9,6 +10,13 @@ const campaignParamsSchema = z.object({
 export async function charactersRoutes(app: FastifyInstance) {
   app.get("/api/campaigns/:campaignId/characters", async (request) => {
     const { campaignId } = campaignParamsSchema.parse(request.params);
+    const access = await getCampaignAccess(request, campaignId);
+
+    if (!access) {
+      const error = new Error("Campaign membership required");
+      error.name = "Forbidden";
+      throw error;
+    }
 
     return query(
       `
@@ -16,8 +24,8 @@ export async function charactersRoutes(app: FastifyInstance) {
         ch.character_id,
         ch.name,
         ch.public_description,
-        ch.secret_description,
-        ch.notes,
+        CASE WHEN $2::BOOLEAN THEN ch.secret_description ELSE NULL END AS secret_description,
+        CASE WHEN $2::BOOLEAN THEN ch.notes ELSE NULL END AS notes,
         ch.status_text,
         ch.current_location_id,
         ch.current_scene_id,
@@ -82,8 +90,7 @@ export async function charactersRoutes(app: FastifyInstance) {
       WHERE ch.campaign_id = $1
       ORDER BY ch.name
       `,
-      [campaignId]
+      [campaignId, access.permissions.canViewGMSecrets]
     );
   });
 }
-
