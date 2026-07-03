@@ -209,6 +209,12 @@ alice@example.com / password123
 - `GET /api/campaigns/:campaignId/dashboard`
 - `GET /api/campaigns/:campaignId/characters`
 - `GET /api/campaigns/:campaignId/npcs`
+- `GET /api/campaigns/:campaignId/npcs/:npcId`
+- `POST /api/campaigns/:campaignId/npcs`
+- `PATCH /api/campaigns/:campaignId/npcs/:npcId`
+- `DELETE /api/campaigns/:campaignId/npcs/:npcId`
+- `GET /api/campaigns/:campaignId/tags`
+- `POST /api/campaigns/:campaignId/tags`
 - `GET /api/campaigns/:campaignId/locations`
 - `GET /api/campaigns/:campaignId/chat`
 - `POST /api/campaigns/:campaignId/dice-roll`

@@ -199,12 +199,86 @@ curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/characters
 - публичные описания;
 - секретные поля ГМа;
 - visibility;
-- tags.
+- tags;
+- status.
 
 Секретные поля `secret_description`, `gm_secrets`, `campaign_journal` возвращаются только для `owner/gm/co_gm`. Для `player/viewer` они приходят как `null`, а `gm_only` NPC не попадают в ответ.
 
 ```powershell
 curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/npcs
+```
+
+### GET `/api/campaigns/:campaignId/npcs/:npcId`
+
+Возвращает одно NPC-досье с теми же правилами visibility и секретов, что и список.
+
+```powershell
+curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/npcs/1
+```
+
+### POST `/api/campaigns/:campaignId/npcs`
+
+Создаёт NPC. Доступно только `owner/gm/co_gm`.
+
+Body:
+
+```json
+{
+  "name": "Инспектор Лестрейд",
+  "title": "Полицейский инспектор",
+  "publicDescription": "Сдержанный представитель полиции Баклунда.",
+  "secretDescription": "Скрывает личный интерес к делу.",
+  "gmSecrets": "Может вывести игроков на культ.",
+  "campaignJournal": "Появился после исчезновения аптекаря.",
+  "locationId": null,
+  "visibility": "hidden_until_discovered",
+  "statusText": "потенциальный союзник",
+  "tagIds": [1, 2]
+}
+```
+
+`locationId` принимается API как подготовка к будущей привязке NPC к сценам, но в текущей схеме прямое поле у `npc` не хранится.
+
+```powershell
+curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/npcs `
+  -H "Content-Type: application/json" `
+  -d '{"name":"Инспектор Лестрейд","title":"Инспектор","publicDescription":"Сдержанный полицейский.","visibility":"public","tagIds":[]}'
+```
+
+### PATCH `/api/campaigns/:campaignId/npcs/:npcId`
+
+Редактирует NPC. Доступно только `owner/gm/co_gm`.
+
+```powershell
+curl -b work\cookies.txt -X PATCH http://localhost:3001/api/campaigns/1/npcs/1 `
+  -H "Content-Type: application/json" `
+  -d '{"statusText":"под наблюдением","visibility":"party_only"}'
+```
+
+### DELETE `/api/campaigns/:campaignId/npcs/:npcId`
+
+Архивирует NPC через `status = archived` и `archived_at`, физически не удаляет запись. Доступно только `owner/gm/co_gm`.
+
+```powershell
+curl -b work\cookies.txt -X DELETE http://localhost:3001/api/campaigns/1/npcs/1
+```
+
+### GET `/api/campaigns/:campaignId/tags`
+
+Возвращает теги кампании. Доступно любому активному участнику кампании.
+
+```powershell
+curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/tags
+```
+
+### POST `/api/campaigns/:campaignId/tags`
+
+Создаёт или обновляет тег кампании по имени. Доступно только `owner/gm/co_gm`.
+
+```powershell
+curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/tags `
+  -H "Content-Type: application/json" `
+  -d '{"name":"Союзник","color":"#8B5CF6"}'
 ```
 
 ### GET `/api/campaigns/:campaignId/locations`
