@@ -162,6 +162,16 @@ export async function getCampaignAccess(
   };
 }
 
+export function requireCampaignMember(
+  request: FastifyRequest,
+  campaignId: string | number,
+  client?: Queryable
+): Promise<CampaignAccess>;
+export function requireCampaignMember(
+  userId: string | number,
+  campaignId: string | number,
+  client?: Queryable
+): Promise<CampaignMember>;
 export async function requireCampaignMember(
   requestOrUserId: FastifyRequest | string | number,
   campaignId: string | number,
@@ -190,12 +200,32 @@ export async function requireCampaignMember(
   return access;
 }
 
+export function requireGameMaster(
+  request: FastifyRequest,
+  campaignId: string | number,
+  client?: Queryable
+): Promise<CampaignAccess>;
+export function requireGameMaster(
+  userId: string | number,
+  campaignId: string | number,
+  client?: Queryable
+): Promise<CampaignMember>;
 export async function requireGameMaster(
   requestOrUserId: FastifyRequest | string | number,
   campaignId: string | number,
   client?: Queryable
 ) {
-  const result = await requireCampaignMember(requestOrUserId, campaignId, client);
+  const result =
+    typeof requestOrUserId === "object"
+      ? await getCampaignAccess(requestOrUserId, campaignId, client)
+      : await getCampaignMember(requestOrUserId, campaignId, client);
+
+  if (!result) {
+    const error = new Error("Campaign membership required");
+    error.name = "Forbidden";
+    throw error;
+  }
+
   const role = "permissions" in result ? result.permissions.role : result.role;
 
   if (!canManageLocations(role)) {
@@ -207,12 +237,32 @@ export async function requireGameMaster(
   return result;
 }
 
+export function requireOwnerOrGM(
+  request: FastifyRequest,
+  campaignId: string | number,
+  client?: Queryable
+): Promise<CampaignAccess>;
+export function requireOwnerOrGM(
+  userId: string | number,
+  campaignId: string | number,
+  client?: Queryable
+): Promise<CampaignMember>;
 export async function requireOwnerOrGM(
   requestOrUserId: FastifyRequest | string | number,
   campaignId: string | number,
   client?: Queryable
 ) {
-  const result = await requireCampaignMember(requestOrUserId, campaignId, client);
+  const result =
+    typeof requestOrUserId === "object"
+      ? await getCampaignAccess(requestOrUserId, campaignId, client)
+      : await getCampaignMember(requestOrUserId, campaignId, client);
+
+  if (!result) {
+    const error = new Error("Campaign membership required");
+    error.name = "Forbidden";
+    throw error;
+  }
+
   const role = "permissions" in result ? result.permissions.role : result.role;
 
   if (!canManageCampaign(role)) {
@@ -256,4 +306,3 @@ export function canViewVisibility(
 
   return visibility === "public" || visibility === "party_only";
 }
-

@@ -2,12 +2,16 @@ import { randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { FastifyInstance, FastifyRequest } from "fastify";
+import { FastifyInstance } from "fastify";
 import { PoolClient } from "pg";
 import { z } from "zod";
-import { CampaignRole, canCreateTravelRequest } from "../access/campaignAccess";
+import {
+  canCreateTravelRequest,
+  getCampaignAccess,
+  requireCampaignMember,
+  requireGameMaster
+} from "../access/campaignAccess";
 import { query, queryOne, withTransaction } from "../db";
-import { getCurrentUserByToken, readSessionToken } from "../auth/session";
 
 const campaignParamsSchema = z.object({
   campaignId: z.coerce.number().int().positive()
@@ -62,95 +66,6 @@ const gmResolutionBodySchema = z.object({
 
 const imageMimeTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
 const uploadRoot = path.resolve(process.cwd(), "uploads");
-const campaignRoles = new Set<string>(["owner", "gm", "co_gm", "player", "viewer"]);
-
-type AuthContext = {
-  user: {
-    user_id: string;
-    email: string;
-    display_name: string;
-    avatar_url: string | null;
-  };
-  role: string | null;
-  isGm: boolean;
-};
-
-async function getAuthContext(
-  request: FastifyRequest,
-  campaignId: number,
-  client?: PoolClient
-): Promise<AuthContext | null> {
-  const token = readSessionToken(request);
-
-  if (!token) {
-    return null;
-  }
-
-  const user = await getCurrentUserByToken(token);
-
-  if (!user) {
-    return null;
-  }
-
-  const roleResult =
-    client
-      ? await client.query<{ role: string }>(
-          `
-          SELECT cm.role
-          FROM campaign_member cm
-          WHERE cm.campaign_id = $1
-            AND cm.user_id = $2
-            AND cm.is_active = TRUE
-          LIMIT 1
-          `,
-          [campaignId, user.user_id]
-        )
-      : null;
-
-  const role = client
-    ? (roleResult?.rows[0]?.role ?? null)
-    : (
-        await queryOne<{ role: string }>(
-          `
-          SELECT cm.role
-          FROM campaign_member cm
-          WHERE cm.campaign_id = $1
-            AND cm.user_id = $2
-            AND cm.is_active = TRUE
-          LIMIT 1
-          `,
-          [campaignId, user.user_id]
-        )
-      )?.role ?? null;
-
-  return {
-    user,
-    role,
-    isGm: role === "owner" || role === "gm" || role === "co_gm"
-  };
-}
-
-function requireAuth(auth: AuthContext | null) {
-  if (!auth) {
-    const error = new Error("Not authenticated");
-    error.name = "Unauthorized";
-    throw error;
-  }
-
-  return auth;
-}
-
-function requireGm(auth: AuthContext | null) {
-  const required = requireAuth(auth);
-
-  if (!required.isGm) {
-    const error = new Error("GM permissions required");
-    error.name = "Forbidden";
-    throw error;
-  }
-
-  return required;
-}
 
 async function ensureCampaignChat(client: PoolClient, campaignId: number) {
   const existing = await client.query<{ chat_id: number }>(
@@ -345,10 +260,10 @@ export async function locationsRoutes(app: FastifyInstance) {
 
   app.get("/api/campaigns/:campaignId/locations", async (request) => {
     const { campaignId } = campaignParamsSchema.parse(request.params);
-    const auth = requireAuth(await getAuthContext(request, campaignId));
+    const auth = await requireCampaignMember(request, campaignId);
     const userId = auth.user.user_id;
-    const isGm = auth.isGm;
-    const isViewer = auth.role === "viewer";
+    const canManageLocations = auth.permissions.canManageLocations;
+    const isViewer = auth.member.role === "viewer";
 
     return query(
       `
@@ -406,16 +321,16 @@ export async function locationsRoutes(app: FastifyInstance) {
         )
       ORDER BY l.parent_location_id NULLS FIRST, l.name
       `,
-      [campaignId, isGm, userId, isViewer]
+      [campaignId, canManageLocations, userId, isViewer]
     );
   });
 
   app.get("/api/campaigns/:campaignId/locations/:locationId", async (request, reply) => {
     const { campaignId, locationId } = locationParamsSchema.parse(request.params);
-    const auth = requireAuth(await getAuthContext(request, campaignId));
+    const auth = await requireCampaignMember(request, campaignId);
     const userId = auth.user.user_id;
-    const isGm = auth.isGm;
-    const isViewer = auth.role === "viewer";
+    const canManageLocations = auth.permissions.canManageLocations;
+    const isViewer = auth.member.role === "viewer";
 
     const location = await queryOne(
       `
@@ -496,7 +411,7 @@ export async function locationsRoutes(app: FastifyInstance) {
         )
       GROUP BY l.location_id, c.active_location_id, pla.user_id, p.location_id, a.attachment_id, children.children
       `,
-      [campaignId, locationId, isGm, userId, isViewer]
+      [campaignId, locationId, canManageLocations, userId, isViewer]
     );
 
     if (!location) {
@@ -508,7 +423,7 @@ export async function locationsRoutes(app: FastifyInstance) {
 
   app.post("/api/campaigns/:campaignId/locations", async (request, reply) => {
     const { campaignId } = campaignParamsSchema.parse(request.params);
-    const auth = requireGm(await getAuthContext(request, campaignId));
+    const auth = await requireGameMaster(request, campaignId);
     const body = locationBodySchema.parse(request.body);
 
     const location = await queryOne(
@@ -555,7 +470,7 @@ export async function locationsRoutes(app: FastifyInstance) {
 
   app.patch("/api/campaigns/:campaignId/locations/:locationId", async (request, reply) => {
     const { campaignId, locationId } = locationParamsSchema.parse(request.params);
-    const auth = requireGm(await getAuthContext(request, campaignId));
+    const auth = await requireGameMaster(request, campaignId);
     const body = locationPatchSchema.parse(request.body);
 
     const before = await queryOne(
@@ -621,7 +536,7 @@ export async function locationsRoutes(app: FastifyInstance) {
 
   app.delete("/api/campaigns/:campaignId/locations/:locationId", async (request, reply) => {
     const { campaignId, locationId } = locationParamsSchema.parse(request.params);
-    const auth = requireGm(await getAuthContext(request, campaignId));
+    const auth = await requireGameMaster(request, campaignId);
 
     const location = await queryOne(
       `
@@ -652,7 +567,7 @@ export async function locationsRoutes(app: FastifyInstance) {
 
   app.post("/api/campaigns/:campaignId/locations/:locationId/activate", async (request, reply) => {
     const { campaignId, locationId } = locationParamsSchema.parse(request.params);
-    const auth = requireGm(await getAuthContext(request, campaignId));
+    const auth = await requireGameMaster(request, campaignId);
 
     const location = await queryOne<{ location_id: string; name: string }>(
       `
@@ -685,7 +600,7 @@ export async function locationsRoutes(app: FastifyInstance) {
 
   app.post("/api/campaigns/:campaignId/locations/:locationId/image", async (request, reply) => {
     const { campaignId, locationId } = locationParamsSchema.parse(request.params);
-    const auth = requireGm(await getAuthContext(request, campaignId));
+    const auth = await requireGameMaster(request, campaignId);
 
     const location = await queryOne(
       "SELECT location_id FROM location WHERE campaign_id = $1 AND location_id = $2",
@@ -787,7 +702,7 @@ export async function locationsRoutes(app: FastifyInstance) {
 
   app.post("/api/campaigns/:campaignId/locations/:locationId/grant-access", async (request, reply) => {
     const { campaignId, locationId } = locationParamsSchema.parse(request.params);
-    const auth = requireGm(await getAuthContext(request, campaignId));
+    const auth = await requireGameMaster(request, campaignId);
     const body = accessBodySchema.parse(request.body);
 
     const result = await withTransaction(async (client) => {
@@ -852,7 +767,7 @@ export async function locationsRoutes(app: FastifyInstance) {
 
   app.post("/api/campaigns/:campaignId/locations/:locationId/revoke-access", async (request, reply) => {
     const { campaignId, locationId } = locationParamsSchema.parse(request.params);
-    const auth = requireGm(await getAuthContext(request, campaignId));
+    const auth = await requireGameMaster(request, campaignId);
     const body = accessBodySchema.parse(request.body);
 
     const access = await withTransaction(async (client) => {
@@ -887,13 +802,9 @@ export async function locationsRoutes(app: FastifyInstance) {
 
   app.post("/api/campaigns/:campaignId/location-travel-requests", async (request, reply) => {
     const { campaignId } = campaignParamsSchema.parse(request.params);
-    const auth = requireAuth(await getAuthContext(request, campaignId));
+    const auth = await requireCampaignMember(request, campaignId);
 
-    if (
-      !auth.role ||
-      !campaignRoles.has(auth.role) ||
-      !canCreateTravelRequest(auth.role as CampaignRole)
-    ) {
+    if (!canCreateTravelRequest(auth.member.role)) {
       return reply.code(403).send({ error: "Only players can create travel requests" });
     }
 
@@ -931,7 +842,7 @@ export async function locationsRoutes(app: FastifyInstance) {
 
   app.get("/api/campaigns/:campaignId/gm-requests", async (request) => {
     const { campaignId } = campaignParamsSchema.parse(request.params);
-    requireGm(await getAuthContext(request, campaignId));
+    await requireGameMaster(request, campaignId);
 
     return query(
       `
@@ -977,7 +888,7 @@ export async function locationsRoutes(app: FastifyInstance) {
 
   app.post("/api/campaigns/:campaignId/gm-requests/:requestId/approve", async (request, reply) => {
     const { campaignId, requestId } = gmRequestParamsSchema.parse(request.params);
-    const auth = requireGm(await getAuthContext(request, campaignId));
+    const auth = await requireGameMaster(request, campaignId);
     const body = gmResolutionBodySchema.parse(request.body);
 
     const result = await withTransaction(async (client) => {
@@ -1110,7 +1021,7 @@ export async function locationsRoutes(app: FastifyInstance) {
 
   app.post("/api/campaigns/:campaignId/gm-requests/:requestId/reject", async (request, reply) => {
     const { campaignId, requestId } = gmRequestParamsSchema.parse(request.params);
-    const auth = requireGm(await getAuthContext(request, campaignId));
+    const auth = await requireGameMaster(request, campaignId);
     const body = gmResolutionBodySchema.parse(request.body);
 
     const result = await withTransaction(async (client) => {
@@ -1203,3 +1114,4 @@ export async function locationsRoutes(app: FastifyInstance) {
     return result;
   });
 }
+
