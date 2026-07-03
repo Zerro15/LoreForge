@@ -122,6 +122,23 @@ END $$;
 
 -- 2.1. Location play-room metadata.
 
+ALTER TABLE npc
+    ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+
+ALTER TABLE npc
+    ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'npc_status_check'
+    ) THEN
+        ALTER TABLE npc
+            ADD CONSTRAINT npc_status_check
+            CHECK (status IN ('active', 'archived'));
+    END IF;
+END $$;
+
 ALTER TABLE location
     ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
 
@@ -761,6 +778,7 @@ CREATE INDEX IF NOT EXISTS idx_campaign_active_location_id ON campaign(active_lo
 CREATE INDEX IF NOT EXISTS idx_campaign_member_campaign_role ON campaign_member(campaign_id, role);
 
 CREATE INDEX IF NOT EXISTS idx_npc_campaign_visibility ON npc(campaign_id, visibility);
+CREATE INDEX IF NOT EXISTS idx_npc_campaign_status ON npc(campaign_id, status);
 CREATE INDEX IF NOT EXISTS idx_location_campaign_visibility ON location(campaign_id, visibility);
 CREATE INDEX IF NOT EXISTS idx_location_campaign_status ON location(campaign_id, status);
 CREATE INDEX IF NOT EXISTS idx_location_cover_attachment_id ON location(cover_attachment_id);
