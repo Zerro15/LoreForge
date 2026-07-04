@@ -112,6 +112,23 @@ UI учитывает флаги:
 
 Ручная проверка ролей описана в `docs/manual-role-test.md`.
 
+## UI labels
+
+Backend enums и API contracts остаются на английском, но пользовательский интерфейс показывает русские подписи через `lib/ui-labels.ts`.
+
+Правило: в UI нельзя выводить raw enum значения напрямую.
+
+Примеры:
+
+- `hidden_until_discovered` → `Скрыт до обнаружения`;
+- `gm_only` → `Только ГМу`;
+- `party_only` → `Для группы`;
+- `co_gm` → `Со-ГМ`;
+- `pending` → `Ожидает решения`;
+- `archived` → `Архивный`.
+
+Если появляется новый enum в backend, для него нужно добавить русскую подпись в `lib/ui-labels.ts` и использовать `getLabel(...)` в presentation layer.
+
 ## NPC CRUD UI
 
 Страница `/campaigns/[campaignId]/npcs` использует client-компонент `NPCManager`.
