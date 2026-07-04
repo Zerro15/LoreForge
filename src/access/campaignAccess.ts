@@ -2,25 +2,31 @@ import { FastifyRequest } from "fastify";
 import { PoolClient, QueryResultRow } from "pg";
 import { CurrentUser, getCurrentUserByToken, readSessionToken } from "../auth/session";
 import { queryOne } from "../db";
+import {
+  canManageCampaign,
+  canManageLocations,
+  CampaignRole,
+  CurrentMemberPermissions,
+  getPermissions,
+  isCampaignRole
+} from "../domain/access/permissions";
 
-export type CampaignRole = "owner" | "gm" | "co_gm" | "player" | "viewer";
+export {
+  canApproveGMRequests,
+  canCreateTravelRequest,
+  canManageCampaign,
+  canManageLocations,
+  canRollDice,
+  canUploadLocationImages,
+  canViewGMSecrets,
+  getPermissions
+} from "../domain/access/permissions";
 
 export type CampaignMember = {
   user_id: string;
   campaign_id: string;
   role: CampaignRole;
   is_active: boolean;
-};
-
-export type CurrentMemberPermissions = {
-  role: CampaignRole;
-  canManageCampaign: boolean;
-  canManageLocations: boolean;
-  canViewGMSecrets: boolean;
-  canApproveGMRequests: boolean;
-  canUploadLocationImages: boolean;
-  canRollDice: boolean;
-  canCreateTravelRequest: boolean;
 };
 
 export type CampaignAccess = {
@@ -30,12 +36,6 @@ export type CampaignAccess = {
 };
 
 type Queryable = Pick<PoolClient, "query">;
-
-const gmRoles = new Set<CampaignRole>(["owner", "gm", "co_gm"]);
-
-function isCampaignRole(role: string): role is CampaignRole {
-  return ["owner", "gm", "co_gm", "player", "viewer"].includes(role);
-}
 
 async function queryOneMaybeClient<T extends QueryResultRow>(
   client: Queryable | undefined,
@@ -48,47 +48,6 @@ async function queryOneMaybeClient<T extends QueryResultRow>(
   }
 
   return queryOne<T>(text, params);
-}
-
-export function canManageCampaign(role: CampaignRole) {
-  return role === "owner" || role === "gm";
-}
-
-export function canManageLocations(role: CampaignRole) {
-  return gmRoles.has(role);
-}
-
-export function canViewGMSecrets(role: CampaignRole) {
-  return gmRoles.has(role);
-}
-
-export function canApproveGMRequests(role: CampaignRole) {
-  return gmRoles.has(role);
-}
-
-export function canUploadLocationImages(role: CampaignRole) {
-  return gmRoles.has(role);
-}
-
-export function canRollDice(role: CampaignRole) {
-  return role !== "viewer";
-}
-
-export function canCreateTravelRequest(role: CampaignRole) {
-  return role === "player";
-}
-
-export function getPermissions(role: CampaignRole): CurrentMemberPermissions {
-  return {
-    role,
-    canManageCampaign: canManageCampaign(role),
-    canManageLocations: canManageLocations(role),
-    canViewGMSecrets: canViewGMSecrets(role),
-    canApproveGMRequests: canApproveGMRequests(role),
-    canUploadLocationImages: canUploadLocationImages(role),
-    canRollDice: canRollDice(role),
-    canCreateTravelRequest: canCreateTravelRequest(role)
-  };
 }
 
 export async function getAuthenticatedUser(request: FastifyRequest) {

@@ -1,9 +1,7 @@
-import { randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { FastifyInstance } from "fastify";
-import { PoolClient } from "pg";
 import { z } from "zod";
 import {
   canCreateTravelRequest,
@@ -12,6 +10,16 @@ import {
   requireGameMaster
 } from "../access/campaignAccess";
 import { query, queryOne, withTransaction } from "../db";
+import {
+  imageMimeTypes,
+  LocationService,
+  uploadRoot
+} from "../services/LocationService";
+import {
+  toGMRequestListDTO,
+  toLocationDTO,
+  toLocationListDTO
+} from "../dto/LocationDTO";
 
 const campaignParamsSchema = z.object({
   campaignId: z.coerce.number().int().positive()
@@ -64,187 +72,6 @@ const gmResolutionBodySchema = z.object({
   response: z.string().trim().max(1000).optional().nullable()
 });
 
-const imageMimeTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
-const uploadRoot = path.resolve(process.cwd(), "uploads");
-
-async function ensureCampaignChat(client: PoolClient, campaignId: number) {
-  const existing = await client.query<{ chat_id: number }>(
-    `
-    SELECT chat_id
-    FROM campaign_chat
-    WHERE campaign_id = $1
-    ORDER BY created_at ASC
-    LIMIT 1
-    `,
-    [campaignId]
-  );
-
-  if (existing.rows[0]) {
-    return existing.rows[0].chat_id;
-  }
-
-  const inserted = await client.query<{ chat_id: number }>(
-    `
-    INSERT INTO campaign_chat (campaign_id, name, chat_type)
-    VALUES ($1, 'Основной чат', 'campaign')
-    RETURNING chat_id
-    `,
-    [campaignId]
-  );
-
-  return inserted.rows[0].chat_id;
-}
-
-async function ensureSystemSessionLog(client: PoolClient, campaignId: number, userId: string) {
-  const existing = await client.query<{ session_log_id: number }>(
-    `
-    SELECT session_log_id
-    FROM session_log
-    WHERE campaign_id = $1
-    ORDER BY session_date DESC NULLS LAST, created_at DESC
-    LIMIT 1
-    `,
-    [campaignId]
-  );
-
-  if (existing.rows[0]) {
-    return existing.rows[0].session_log_id;
-  }
-
-  const inserted = await client.query<{ session_log_id: number }>(
-    `
-    INSERT INTO session_log (
-      campaign_id,
-      title,
-      summary_public,
-      visibility,
-      created_by_user_id,
-      session_date
-    )
-    VALUES ($1, 'Системный журнал локаций', 'События управления локациями.', 'party_only', $2, CURRENT_DATE)
-    RETURNING session_log_id
-    `,
-    [campaignId, userId]
-  );
-
-  return inserted.rows[0].session_log_id;
-}
-
-async function writeLocationEvent(
-  client: PoolClient,
-  options: {
-    campaignId: number;
-    userId: string;
-    eventType: string;
-    title: string;
-    description?: string | null;
-    locationId?: number | null;
-    chatMessage?: string | null;
-    visibility?: string;
-  }
-) {
-  const sessionLogId = await ensureSystemSessionLog(
-    client,
-    options.campaignId,
-    options.userId
-  );
-
-  await client.query(
-    `
-    INSERT INTO session_event (
-      session_log_id,
-      campaign_id,
-      event_type,
-      title,
-      description,
-      related_entity_type,
-      related_entity_id,
-      visibility
-    )
-    VALUES ($1, $2, $3, $4, $5, 'location', $6, $7)
-    `,
-    [
-      sessionLogId,
-      options.campaignId,
-      options.eventType,
-      options.title,
-      options.description ?? null,
-      options.locationId ?? null,
-      options.visibility ?? "party_only"
-    ]
-  );
-
-  if (options.chatMessage) {
-    const chatId = await ensureCampaignChat(client, options.campaignId);
-
-    await client.query(
-      `
-      INSERT INTO chat_message (
-        chat_id,
-        sender_user_id,
-        body,
-        message_type,
-        visibility,
-        metadata_json
-      )
-      VALUES ($1, $2, $3, 'system', $4, $5)
-      `,
-      [
-        chatId,
-        options.userId,
-        options.chatMessage,
-        options.visibility ?? "party_only",
-        JSON.stringify({
-          eventType: options.eventType,
-          locationId: options.locationId ?? null
-        })
-      ]
-    );
-  }
-}
-
-function toNullableDate(value: string | null | undefined) {
-  return value ? new Date(value).toISOString() : null;
-}
-
-function safeUploadedFilename(originalName: string) {
-  const extension = path.extname(originalName).toLowerCase();
-  const allowed = new Set([".png", ".jpg", ".jpeg", ".webp"]);
-  const finalExtension = allowed.has(extension) ? extension : ".img";
-
-  return `${randomUUID()}${finalExtension}`;
-}
-
-function getMimeTypeByPath(filePath: string) {
-  const extension = path.extname(filePath).toLowerCase();
-
-  if (extension === ".png") {
-    return "image/png";
-  }
-
-  if (extension === ".webp") {
-    return "image/webp";
-  }
-
-  if (extension === ".jpg" || extension === ".jpeg") {
-    return "image/jpeg";
-  }
-
-  return "application/octet-stream";
-}
-
-async function setActiveLocation(client: PoolClient, campaignId: number, locationId: number) {
-  await client.query(
-    `
-    UPDATE campaign
-    SET active_location_id = $1,
-        updated_at = NOW()
-    WHERE campaign_id = $2
-    `,
-    [locationId, campaignId]
-  );
-}
-
 export async function locationsRoutes(app: FastifyInstance) {
   app.get("/uploads/*", async (request, reply) => {
     const wildcard = (request.params as { "*": string })["*"];
@@ -255,7 +82,7 @@ export async function locationsRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "Invalid upload path" });
     }
 
-    return reply.type(getMimeTypeByPath(filePath)).send(createReadStream(filePath));
+    return reply.type(LocationService.getMimeTypeByPath(filePath)).send(createReadStream(filePath));
   });
 
   app.get("/api/campaigns/:campaignId/locations", async (request) => {
@@ -265,7 +92,7 @@ export async function locationsRoutes(app: FastifyInstance) {
     const canManageLocations = auth.permissions.canManageLocations;
     const isViewer = auth.member.role === "viewer";
 
-    return query(
+    const locations = await query(
       `
       SELECT
         l.location_id,
@@ -323,6 +150,8 @@ export async function locationsRoutes(app: FastifyInstance) {
       `,
       [campaignId, canManageLocations, userId, isViewer]
     );
+
+    return toLocationListDTO(locations);
   });
 
   app.get("/api/campaigns/:campaignId/locations/:locationId", async (request, reply) => {
@@ -418,7 +247,7 @@ export async function locationsRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: "Location not found or unavailable" });
     }
 
-    return location;
+    return toLocationDTO(location);
   });
 
   app.post("/api/campaigns/:campaignId/locations", async (request, reply) => {
@@ -453,7 +282,7 @@ export async function locationsRoutes(app: FastifyInstance) {
         body.stateText ?? null,
         body.visibility,
         body.isEventLocation,
-        toNullableDate(body.expiresAt)
+        LocationService.toNullableDate(body.expiresAt)
       ]
     );
 
@@ -465,7 +294,7 @@ export async function locationsRoutes(app: FastifyInstance) {
       [campaignId, auth.user.user_id, location?.location_id, JSON.stringify(location)]
     );
 
-    return reply.code(201).send(location);
+    return reply.code(201).send(location ? toLocationDTO(location) : null);
   });
 
   app.patch("/api/campaigns/:campaignId/locations/:locationId", async (request, reply) => {
@@ -512,7 +341,7 @@ export async function locationsRoutes(app: FastifyInstance) {
         body.locationType ?? null,
         body.stateText ?? null,
         body.isEventLocation ?? null,
-        toNullableDate(body.expiresAt),
+        LocationService.toNullableDate(body.expiresAt),
         body.status ?? null
       ]
     );
@@ -531,7 +360,7 @@ export async function locationsRoutes(app: FastifyInstance) {
       ]
     );
 
-    return location;
+    return location ? toLocationDTO(location) : null;
   });
 
   app.delete("/api/campaigns/:campaignId/locations/:locationId", async (request, reply) => {
@@ -583,15 +412,15 @@ export async function locationsRoutes(app: FastifyInstance) {
     }
 
     await withTransaction(async (client) => {
-      await setActiveLocation(client, campaignId, locationId);
-      await writeLocationEvent(client, {
+      await LocationService.setActiveLocation(client, campaignId, locationId);
+      await LocationService.writeLocationEvent(client, {
         campaignId,
         userId: auth.user.user_id,
         eventType: "location_activated",
-        title: `Активная локация: ${location.name}`,
-        description: "ГМ сменил центральную сцену игровой комнаты.",
+        title: `Active location: ${location.name}`,
+        description: "GM changed the central play scene.",
         locationId,
-        chatMessage: `ГМ меняет активную локацию: ${location.name}.`
+        chatMessage: `GM changes the active location: ${location.name}.`
       });
     });
 
@@ -627,7 +456,7 @@ export async function locationsRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "Image is larger than 10MB" });
     }
 
-    const filename = safeUploadedFilename(file.filename);
+    const filename = LocationService.safeUploadedFilename(file.filename);
     const relativeDir = path.join("campaigns", String(campaignId), "locations");
     const absoluteDir = path.join(uploadRoot, relativeDir);
     const absolutePath = path.join(absoluteDir, filename);
@@ -741,14 +570,14 @@ export async function locationsRoutes(app: FastifyInstance) {
         [campaignId, body.userId, locationId, auth.user.user_id, body.reason ?? null]
       );
 
-      await writeLocationEvent(client, {
+      await LocationService.writeLocationEvent(client, {
         campaignId,
         userId: auth.user.user_id,
         eventType: "location_access_granted",
-        title: `Открыт доступ к локации: ${location.rows[0].name}`,
+        title: `Location access granted: ${location.rows[0].name}`,
         description: body.reason ?? null,
         locationId,
-        chatMessage: `ГМ открывает доступ к локации: ${location.rows[0].name}.`
+        chatMessage: `GM grants access to location: ${location.rows[0].name}.`
       });
 
       await client.query(
@@ -824,7 +653,7 @@ export async function locationsRoutes(app: FastifyInstance) {
         action_payload,
         status
       )
-      VALUES ($1, $2, $3, 'location_travel', 'Запрос перехода в локацию', $4, 'location', $5, $6, 'pending')
+      VALUES ($1, $2, $3, 'location_travel', 'Location travel request', $4, 'location', $5, $6, 'pending')
       RETURNING *
       `,
       [
@@ -844,7 +673,7 @@ export async function locationsRoutes(app: FastifyInstance) {
     const { campaignId } = campaignParamsSchema.parse(request.params);
     await requireGameMaster(request, campaignId);
 
-    return query(
+    const requests = await query(
       `
       SELECT
         gr.request_id,
@@ -884,6 +713,8 @@ export async function locationsRoutes(app: FastifyInstance) {
       `,
       [campaignId]
     );
+
+    return toGMRequestListDTO(requests);
   });
 
   app.post("/api/campaigns/:campaignId/gm-requests/:requestId/approve", async (request, reply) => {
@@ -963,7 +794,7 @@ export async function locationsRoutes(app: FastifyInstance) {
           travelRequest.requester_user_id,
           travelRequest.target_location_id,
           auth.user.user_id,
-          body.response ?? "Переход одобрен ГМ."
+          body.response ?? "Travel request approved by GM."
         ]
       );
 
@@ -983,18 +814,18 @@ export async function locationsRoutes(app: FastifyInstance) {
         );
       }
 
-      await setActiveLocation(client, campaignId, travelRequest.target_location_id);
+      await LocationService.setActiveLocation(client, campaignId, travelRequest.target_location_id);
 
-      await writeLocationEvent(client, {
+      await LocationService.writeLocationEvent(client, {
         campaignId,
         userId: auth.user.user_id,
         eventType: "location_travel_approved",
-        title: `Переход одобрен: ${travelRequest.target_location_name}`,
+        title: `Travel approved: ${travelRequest.target_location_name}`,
         description: body.response ?? null,
         locationId: travelRequest.target_location_id,
         chatMessage:
           body.response ??
-          `ГМ одобряет переход в локацию: ${travelRequest.target_location_name}.`
+          `GM approves travel to location: ${travelRequest.target_location_name}.`
       });
 
       await client.query(
@@ -1067,7 +898,7 @@ export async function locationsRoutes(app: FastifyInstance) {
         [campaignId, requestId, body.response ?? null, auth.user.user_id]
       );
 
-      const chatId = await ensureCampaignChat(client, campaignId);
+      const chatId = await LocationService.ensureCampaignChat(client, campaignId);
       await client.query(
         `
         INSERT INTO chat_message (
@@ -1083,7 +914,7 @@ export async function locationsRoutes(app: FastifyInstance) {
         [
           chatId,
           auth.user.user_id,
-          body.response ?? "ГМ отклонил запрос перехода.",
+          body.response ?? "GM rejected the travel request.",
           JSON.stringify({
             requestId,
             targetLocationId: travelRequest.target_location_id,
@@ -1114,4 +945,5 @@ export async function locationsRoutes(app: FastifyInstance) {
     return result;
   });
 }
+
 
