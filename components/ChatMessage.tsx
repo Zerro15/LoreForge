@@ -1,4 +1,5 @@
 import { MessageSquare, UserRound } from "lucide-react";
+import { getLabel, messageTypeLabels, visibilityLabels } from "@/lib/ui-labels";
 import type { ChatMessage as ChatMessageType } from "@/lib/types";
 import { Badge, Card } from "./ui";
 import { DiceRollPanel } from "./DiceRollPanel";
@@ -34,10 +35,10 @@ export function ChatMessage({ message }: { message: ChatMessageType }) {
         </div>
         <div className="flex items-center gap-2">
           <Badge tone={message.message_type === "dice" ? "gold" : "muted"}>
-            {message.message_type}
+            {getLabel(messageTypeLabels, message.message_type, "Сообщение")}
           </Badge>
           <Badge tone={message.visibility === "public" ? "green" : "purple"}>
-            {message.visibility}
+            {getLabel(visibilityLabels, message.visibility)}
           </Badge>
         </div>
       </div>

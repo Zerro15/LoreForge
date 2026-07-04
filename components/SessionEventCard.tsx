@@ -1,4 +1,5 @@
 import { Clock, ScrollText } from "lucide-react";
+import { getLabel, sessionEventTypeLabels } from "@/lib/ui-labels";
 import type { SessionEvent } from "@/lib/types";
 import { Badge, Card } from "./ui";
 
@@ -10,7 +11,9 @@ export function SessionEventCard({ event }: { event: SessionEvent }) {
           <ScrollText size={16} className="text-[#A78BFA]" />
           {event.title}
         </div>
-        <Badge tone="blue">{event.event_type}</Badge>
+        <Badge tone="blue">
+          {getLabel(sessionEventTypeLabels, event.event_type, "Событие")}
+        </Badge>
       </div>
       {event.description ? (
         <p className="text-sm leading-6 text-[#c7ccd6]">{event.description}</p>

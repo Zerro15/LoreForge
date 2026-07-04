@@ -1,4 +1,5 @@
 import { ArrowRight, Bot, Map, Users } from "lucide-react";
+import { getLabel, statusLabels } from "@/lib/ui-labels";
 import type { CampaignSummary } from "@/lib/types";
 import { Badge, Button, Card, PluginBadge } from "./ui";
 
@@ -8,7 +9,9 @@ export function CampaignCard({ campaign }: { campaign: CampaignSummary }) {
       <div className="flex flex-col justify-between gap-5 md:flex-row">
         <div className="min-w-0">
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <Badge tone="green">{campaign.status}</Badge>
+            <Badge tone="green">
+              {getLabel(statusLabels, campaign.status, campaign.status)}
+            </Badge>
             <PluginBadge name={campaign.active_plugin_name} />
           </div>
           <h2 className="text-2xl font-semibold tracking-tight">

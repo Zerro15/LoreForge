@@ -38,6 +38,16 @@ export const messageTypeLabels: Record<string, string> = {
   note: "Заметка"
 };
 
+export const sessionEventTypeLabels: Record<string, string> = {
+  arrival: "Прибытие",
+  conversation: "Разговор",
+  ability: "Способность",
+  clue_found: "Найдена зацепка",
+  sighting: "Наблюдение",
+  travel: "Переход",
+  location_access: "Доступ к локации"
+};
+
 export const locationTypeLabels: Record<string, string> = {
   location: "Локация",
   district: "Район",
