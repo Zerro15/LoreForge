@@ -1,4 +1,5 @@
 import { Archive, Bot, Edit3, Tags } from "lucide-react";
+import { getLabel, visibilityLabels } from "@/lib/ui-labels";
 import type { Npc, NpcPreview } from "@/lib/types";
 import { Badge, Button, Card, SecretBlock } from "./ui";
 
@@ -26,7 +27,7 @@ export function NPCDossierCard({
         </div>
         <Badge tone={npc.visibility === "public" ? "green" : "purple"}>
           <Bot size={13} />
-          {npc.visibility}
+          {getLabel(visibilityLabels, npc.visibility)}
         </Badge>
       </div>
 

@@ -3,6 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { SessionEventCard } from "@/components/SessionEventCard";
 import { Badge, Card, EmptyState, ErrorState, SecretBlock } from "@/components/ui";
 import { getSessionLog } from "@/lib/api";
+import { getLabel, visibilityLabels } from "@/lib/ui-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export default async function SessionLogPage({
                   </div>
                 </div>
                 <Badge tone={log.visibility === "public" ? "green" : "purple"}>
-                  {log.visibility}
+                  {getLabel(visibilityLabels, log.visibility)}
                 </Badge>
               </div>
 

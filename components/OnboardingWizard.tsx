@@ -253,7 +253,7 @@ export function OnboardingWizard() {
                     <Crown className="mb-4 text-[#A78BFA]" />
                     <div className="text-lg font-semibold">Создать кампанию как ГМ</div>
                     <p className="mt-2 text-sm text-[#9CA3AF]">
-                      Вы будете владельцем кампании и попадёте в Play Room.
+                      Вы будете владельцем кампании и попадёте в игровую комнату.
                     </p>
                   </button>
                   <button
@@ -388,7 +388,7 @@ export function OnboardingWizard() {
                     <MapPinned className="mb-5 text-[#A78BFA]" />
                     <h3 className="text-xl font-semibold">Первая сцена</h3>
                     <p className="mt-3 text-sm leading-6 text-[#9CA3AF]">
-                      Эта локация станет активной в Play Room. Позже ГМ сможет добавить больше мест и открыть их игрокам.
+                      Эта локация станет активной в игровой комнате. Позже ГМ сможет добавить больше мест и открыть их игрокам.
                     </p>
                   </Card>
                 </div>

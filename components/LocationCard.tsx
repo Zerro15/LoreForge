@@ -1,4 +1,5 @@
 import { MapPinned } from "lucide-react";
+import { getLabel, locationTypeLabels, visibilityLabels } from "@/lib/ui-labels";
 import type { Location, LocationPreview } from "@/lib/types";
 import { Badge, Card, SecretBlock } from "./ui";
 
@@ -17,13 +18,13 @@ export function LocationCard({
         <div>
           <h3 className="text-lg font-semibold">{location.name}</h3>
           <p className="mt-1 text-sm text-[#9CA3AF]">
-            {location.location_type ?? "Локация"}
+            {getLabel(locationTypeLabels, location.location_type, "Локация")}
             {parentName ? ` / ${parentName}` : ""}
           </p>
         </div>
         <Badge tone={location.visibility === "public" ? "green" : "gold"}>
           <MapPinned size={13} />
-          {location.visibility}
+          {getLabel(visibilityLabels, location.visibility)}
         </Badge>
       </div>
 

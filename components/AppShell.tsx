@@ -15,7 +15,7 @@ import { Badge, Button } from "./ui";
 
 const navItems = [
   { href: "/campaigns", label: "Кампании", icon: Castle },
-  { href: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "dashboard", label: "Обзор", icon: LayoutDashboard },
   { href: "characters", label: "Персонажи", icon: Users },
   { href: "npcs", label: "NPC", icon: Bot },
   { href: "locations", label: "Локации", icon: Map },

@@ -15,6 +15,7 @@ import {
   type NpcInput,
   updateNpc
 } from "@/lib/api";
+import { visibilityLabels } from "@/lib/ui-labels";
 import type { Dashboard, Location, Npc, Tag, Visibility } from "@/lib/types";
 import { Badge, Button, Card, EmptyState, ErrorState, Input } from "./ui";
 
@@ -44,14 +45,6 @@ const emptyForm: NpcFormState = {
   visibility: "hidden_until_discovered",
   statusText: "",
   tagIds: []
-};
-
-const visibilityLabels: Record<Visibility, string> = {
-  public: "Публично",
-  party_only: "Только группа",
-  player_only: "Только игрок",
-  gm_only: "Только ГМ",
-  hidden_until_discovered: "Скрыто до открытия"
 };
 
 function fromNpc(npc: Npc): NpcFormState {
@@ -174,7 +167,7 @@ export function NPCManager({ campaignId }: { campaignId: string }) {
           <div>
             <div className="flex items-center gap-2 text-sm text-[#A78BFA]">
               <Bot size={16} />
-              NPC dossier
+              Досье персонажей
             </div>
             <h2 className="mt-2 text-2xl font-semibold">Персонажи мира</h2>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-[#9CA3AF]">

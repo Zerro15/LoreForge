@@ -44,6 +44,14 @@ import type {
   Location,
   Visibility
 } from "@/lib/types";
+import {
+  getLabel,
+  locationTypeLabels,
+  requestStatusLabels,
+  roleLabels,
+  statusLabels,
+  visibilityLabels
+} from "@/lib/ui-labels";
 import { ChatMessage } from "./ChatMessage";
 import { DiceQuickRolls } from "./DiceQuickRolls";
 import { Badge, Button, Card, EmptyState, ErrorState, Input } from "./ui";
@@ -110,11 +118,13 @@ export function LocationVisibilityBadge({
     <div className="flex flex-wrap gap-2">
       <Badge tone={tone}>
         {location.visibility === "gm_only" ? <Lock size={13} /> : <Eye size={13} />}
-        {location.visibility}
+        {getLabel(visibilityLabels, location.visibility)}
       </Badge>
       {location.is_event_location ? <Badge tone="orange">Событие</Badge> : null}
       {location.status && location.status !== "active" ? (
-        <Badge tone="muted">{location.status}</Badge>
+        <Badge tone="muted">
+          {getLabel(statusLabels, location.status, location.status)}
+        </Badge>
       ) : null}
     </div>
   );
@@ -188,7 +198,7 @@ export function LocationPicker({
               {location.name}
             </span>
             <span className="text-xs text-[#9CA3AF]">
-              {location.location_type ?? "location"}
+              {getLabel(locationTypeLabels, location.location_type, "Локация")}
             </span>
           </span>
           {location.location_id === activeLocationId ? (
@@ -442,7 +452,7 @@ export function LocationManagerModal({
                 >
                   {visibilityOptions.map((option) => (
                     <option key={option} value={option}>
-                      {option}
+                      {getLabel(visibilityLabels, option)}
                     </option>
                   ))}
                 </select>
@@ -465,7 +475,7 @@ export function LocationManagerModal({
                   onChange={(event) => setIsEventLocation(event.target.checked)}
                   type="checkbox"
                 />
-                Временная/event location
+                Временная локация-событие
               </label>
               <Button type="submit">
                 <Plus size={16} />
@@ -669,7 +679,9 @@ export function GMRequestCard({
             <span className="text-[#F5F2EA]">{request.target_location.name}</span>
           </p>
         </div>
-        <Badge tone="gold">pending</Badge>
+        <Badge tone="gold">
+          {getLabel(requestStatusLabels, request.status, "Ожидает решения")}
+        </Badge>
       </div>
       {request.message ? (
         <p className="mt-3 rounded-xl border border-[#273244] bg-[#0B0F17]/60 p-3 text-sm text-[#c7ccd6]">
@@ -729,7 +741,9 @@ export function GMRequestsPanel({
           ))}
         </div>
       ) : (
-        <p className="text-sm text-[#9CA3AF]">Pending-запросов пока нет.</p>
+        <p className="text-sm text-[#9CA3AF]">
+          Запросов, ожидающих решения, пока нет.
+        </p>
       )}
     </Card>
   );
@@ -831,7 +845,7 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
               <div>
                 <div className="text-sm text-[#9CA3AF]">
                   Мир: {state.dashboard.campaign.setting_name ?? "Core"} · Роль:{" "}
-                  {role ?? "viewer"}
+                  {getLabel(roleLabels, role, "Наблюдатель")}
                 </div>
                 <h2 className="mt-1 text-xl font-semibold">
                   {state.dashboard.campaign.title}

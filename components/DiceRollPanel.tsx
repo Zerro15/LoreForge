@@ -1,4 +1,5 @@
 import { Dices } from "lucide-react";
+import { getLabel, visibilityLabels } from "@/lib/ui-labels";
 import type { DiceRoll } from "@/lib/types";
 import { Badge, Card } from "./ui";
 
@@ -16,7 +17,7 @@ export function DiceRollPanel({ roll }: { roll: DiceRoll }) {
           <div>
             <div className="text-lg font-semibold">{roll.expression}</div>
             <div className="line-clamp-1 text-xs text-[#9CA3AF]">
-              {roll.description ?? roll.visibility}
+              {roll.description ?? getLabel(visibilityLabels, roll.visibility)}
             </div>
           </div>
         </div>
