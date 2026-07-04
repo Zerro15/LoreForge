@@ -40,8 +40,11 @@ http://localhost:3000/login
 5. Проверить, что доступны создание, архивирование, загрузка картинки, активация локации, выдача и отзыв доступа.
 6. Проверить, что виден блок **Запросы игроков**.
 7. Открыть `/campaigns/1/npcs` и убедиться, что видны `SecretBlock`.
-8. Открыть `/campaigns/1/session-log` и убедиться, что приватные заметки видны.
-9. Повторить коротко для `gm@loreforge.local` и `cogm@loreforge.local`.
+8. На странице NPC нажать **Добавить NPC**, заполнить имя, visibility и тег, сохранить.
+9. Проверить, что новый NPC появился в списке и его можно отредактировать.
+10. Нажать **Архивировать** и убедиться, что NPC исчез из списка без физического удаления.
+11. Открыть `/campaigns/1/session-log` и убедиться, что приватные заметки видны.
+12. Повторить коротко для `gm@loreforge.local` и `cogm@loreforge.local`.
 
 ## Проверка player
 
@@ -51,8 +54,9 @@ http://localhost:3000/login
 4. Проверить, что есть кнопка **Запросить переход**.
 5. Проверить, что видны только доступные/public/party локации.
 6. Открыть `/campaigns/1/npcs` и убедиться, что `SecretBlock` не отображается.
-7. Открыть `/campaigns/1/chat` и сделать быстрый бросок `1d20`.
-8. Проверить, что бросок появляется в чате.
+7. Проверить, что кнопки **Добавить NPC**, **Редактировать** и **Архивировать** не отображаются.
+8. Открыть `/campaigns/1/chat` и сделать быстрый бросок `1d20`.
+9. Проверить, что бросок появляется в чате.
 
 ## Проверка viewer
 
@@ -62,7 +66,18 @@ http://localhost:3000/login
 4. Проверить, что быстрые броски отключены с подписью `Режим просмотра: броски недоступны`.
 5. Открыть `/campaigns/1/npcs` и `/campaigns/1/session-log`.
 6. Проверить, что секреты ГМа и приватные summaries не отображаются.
-7. Попробовать бросок через API:
+7. Проверить, что управление NPC недоступно.
+8. Попробовать создать NPC через API:
+
+```powershell
+curl -i -b work\viewer-cookies.txt -X POST http://localhost:3001/api/campaigns/1/npcs `
+  -H "Content-Type: application/json" `
+  -d '{"name":"Viewer NPC","visibility":"public"}'
+```
+
+Ожидаемый результат: `403 GM permissions required`.
+
+9. Попробовать бросок через API:
 
 ```powershell
 curl -i -b work\viewer-cookies.txt -X POST http://localhost:3001/api/campaigns/1/dice-roll `
@@ -116,4 +131,50 @@ curl -b work\owner-cookies.txt http://localhost:3001/api/campaigns/1/dashboard
     "canCreateTravelRequest": false
   }
 }
+```
+
+## Проверка NPC CRUD через curl
+
+Войти owner:
+
+```powershell
+curl -i -c work\owner-cookies.txt -X POST http://localhost:3001/api/auth/login `
+  -H "Content-Type: application/json" `
+  -d '{"email":"admin@loreforge.local","password":"password123"}'
+```
+
+Создать тег:
+
+```powershell
+curl -b work\owner-cookies.txt -X POST http://localhost:3001/api/campaigns/1/tags `
+  -H "Content-Type: application/json" `
+  -d '{"name":"Тестовый тег","color":"#8B5CF6"}'
+```
+
+Создать NPC:
+
+```powershell
+curl -b work\owner-cookies.txt -X POST http://localhost:3001/api/campaigns/1/npcs `
+  -H "Content-Type: application/json" `
+  -d '{"name":"Тестовый NPC","title":"Свидетель","publicDescription":"Публичная заметка.","secretDescription":"Секретная заметка.","visibility":"public","tagIds":[]}'
+```
+
+Проверить список:
+
+```powershell
+curl -b work\owner-cookies.txt http://localhost:3001/api/campaigns/1/npcs
+```
+
+Отредактировать:
+
+```powershell
+curl -b work\owner-cookies.txt -X PATCH http://localhost:3001/api/campaigns/1/npcs/1 `
+  -H "Content-Type: application/json" `
+  -d '{"statusText":"проверен"}'
+```
+
+Архивировать:
+
+```powershell
+curl -b work\owner-cookies.txt -X DELETE http://localhost:3001/api/campaigns/1/npcs/1
 ```

@@ -8,6 +8,7 @@ import type {
   Location,
   Npc,
   SessionLog,
+  Tag,
   Visibility,
   WorldPlugin
 } from "./types";
@@ -89,6 +90,73 @@ export function getCharacters(campaignId: string) {
 
 export function getNpcs(campaignId: string) {
   return requestApi<Npc[]>(`/api/campaigns/${campaignId}/npcs`);
+}
+
+export type NpcInput = {
+  name: string;
+  title?: string | null;
+  publicDescription?: string | null;
+  secretDescription?: string | null;
+  gmSecrets?: string | null;
+  campaignJournal?: string | null;
+  locationId?: number | null;
+  visibility: Visibility;
+  statusText?: string | null;
+  tagIds?: number[];
+};
+
+export function getNpc(campaignId: string, npcId: string) {
+  return requestApi<Npc>(`/api/campaigns/${campaignId}/npcs/${npcId}`);
+}
+
+export function createNpc(campaignId: string, body: NpcInput) {
+  return requestApi<Npc>(`/api/campaigns/${campaignId}/npcs`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+export function updateNpc(
+  campaignId: string,
+  npcId: string,
+  body: Partial<NpcInput>
+) {
+  return requestApi<Npc>(`/api/campaigns/${campaignId}/npcs/${npcId}`, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+export function archiveNpc(campaignId: string, npcId: string) {
+  return requestApi<{ ok: true; npc: Npc }>(
+    `/api/campaigns/${campaignId}/npcs/${npcId}`,
+    {
+      method: "DELETE"
+    }
+  );
+}
+
+export function getTags(campaignId: string) {
+  return requestApi<Tag[]>(`/api/campaigns/${campaignId}/tags`);
+}
+
+export function createTag(
+  campaignId: string,
+  body: { name: string; color?: string | null }
+) {
+  return requestApi<Tag>(`/api/campaigns/${campaignId}/tags`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
 }
 
 export function getLocations(campaignId: string) {

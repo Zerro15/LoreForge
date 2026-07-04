@@ -41,7 +41,7 @@ Backend API: http://localhost:3001
 - `/campaigns` - список кампаний;
 - `/campaigns/[campaignId]` - игровая комната кампании: активная локация, чат, кубики и запросы переходов;
 - `/campaigns/[campaignId]/characters` - персонажи, характеристики, ресурсы и способности;
-- `/campaigns/[campaignId]/npcs` - NPC-досье и секреты ГМа;
+- `/campaigns/[campaignId]/npcs` - NPC-досье, теги, visibility и редактор для ГМа;
 - `/campaigns/[campaignId]/locations` - локации и вложенность;
 - `/campaigns/[campaignId]/chat` - последние сообщения и броски;
 - `/campaigns/[campaignId]/session-log` - журнал сессий и события.
@@ -111,6 +111,21 @@ UI учитывает флаги:
 `DiceQuickRolls` больше не использует demo user id: actor определяется backend-ом по текущей session.
 
 Ручная проверка ролей описана в `docs/manual-role-test.md`.
+
+## NPC CRUD UI
+
+Страница `/campaigns/[campaignId]/npcs` использует client-компонент `NPCManager`.
+
+Что делает экран:
+
+- загружает `dashboard`, `npcs`, `tags` и `locations`;
+- определяет права по `currentMember`;
+- для `owner/gm/co_gm` показывает кнопку **Добавить NPC**, действия **Редактировать** и **Архивировать**;
+- для `player/viewer` скрывает управляющие кнопки и показывает только разрешённые backend-ом NPC;
+- не отображает `SecretBlock`, если backend не вернул секретные поля;
+- позволяет выбрать visibility, статус, теги и локацию в форме NPC.
+
+Ограничение текущего шага: `locationId` есть в форме и API body как подготовка к будущей привязке NPC к сценам, но прямое поле в таблице `npc` пока не хранится.
 
 ## Onboarding
 
