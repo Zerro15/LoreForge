@@ -17,7 +17,7 @@ async function ensureMistboundPlugin() {
       VALUES (
         'Mistbound',
         'mistbound',
-        'Пути, последовательности, зелья, духовность и риск потери контроля.',
+        'Paths, sequences, potions, spirituality and loss-of-control risk.',
         'system'
       )
       `

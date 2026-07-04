@@ -97,7 +97,7 @@ export async function diceRoutes(app: FastifyInstance) {
         chat = await client.query<{ chat_id: number }>(
           `
           INSERT INTO campaign_chat (campaign_id, name, chat_type)
-          VALUES ($1, 'Основной чат', 'campaign')
+          VALUES ($1, 'Main chat', 'campaign')
           RETURNING chat_id
           `,
           [campaignId]
@@ -156,7 +156,7 @@ export async function diceRoutes(app: FastifyInstance) {
           chatId,
           access.user.user_id,
           body.characterId ?? null,
-          `${actorName} бросает ${body.formula}.`,
+          `${actorName} rolls ${body.formula}.`,
           body.formula,
           parsedFormula.diceCount,
           parsedFormula.diceType,
@@ -189,7 +189,7 @@ export async function diceRoutes(app: FastifyInstance) {
           chatId,
           access.user.user_id,
           body.characterId ?? null,
-          `${actorName} бросает ${body.formula}: ${result.total}.`,
+          `${actorName} rolls ${body.formula}: ${result.total}.`,
           body.visibility,
           JSON.stringify({
             expression: body.formula,
