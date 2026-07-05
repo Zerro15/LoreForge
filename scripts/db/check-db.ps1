@@ -36,12 +36,31 @@ function Invoke-DbScalar {
     }
 }
 
+function Wait-PostgresReady {
+    Write-Host "Waiting for PostgreSQL readiness..." -ForegroundColor Cyan
+
+    for ($i = 1; $i -le 30; $i++) {
+        docker exec $ContainerName pg_isready -U $DatabaseUser -d $DatabaseName *> $null
+
+        if ($LASTEXITCODE -eq 0) {
+            docker exec $ContainerName psql -U $DatabaseUser -d $DatabaseName -At -c "SELECT 1;" *> $null
+
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "PostgreSQL is ready." -ForegroundColor Green
+                return
+            }
+        }
+
+        Start-Sleep -Seconds 2
+    }
+
+    docker logs $ContainerName --tail 80
+    throw "PostgreSQL is not available after waiting. Start it with: docker compose up -d"
+}
+
 Write-Host "Checking LoreForge dev database..." -ForegroundColor Cyan
 
-docker exec $ContainerName pg_isready -U $DatabaseUser -d $DatabaseName
-if ($LASTEXITCODE -ne 0) {
-    throw "PostgreSQL is not available. Start it with: docker compose up -d"
-}
+Wait-PostgresReady
 
 Write-Host ""
 Write-Host "PostgreSQL version:" -ForegroundColor Cyan
@@ -75,4 +94,3 @@ if ($missing.Count -gt 0) {
 
 Write-Host ""
 Write-Host "LoreForge dev database check passed." -ForegroundColor Green
-

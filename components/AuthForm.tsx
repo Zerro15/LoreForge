@@ -12,7 +12,9 @@ type AuthMode = "login" | "register";
 export function AuthForm({ mode }: { mode: AuthMode }) {
   const router = useRouter();
   const [displayName, setDisplayName] = useState("");
-  const [email, setEmail] = useState(mode === "login" ? "bogdan@example.com" : "");
+  const [email, setEmail] = useState(
+    mode === "login" ? "admin@loreforge.local" : ""
+  );
   const [password, setPassword] = useState(mode === "login" ? "password123" : "");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,7 +67,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
       ) : null}
 
       <label className="block">
-        <span className="mb-2 block text-sm text-[#cbd1dc]">Email</span>
+        <span className="mb-2 block text-sm text-[#cbd1dc]">Почта</span>
         <span className="relative block">
           <Mail
             className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6f7787]"
