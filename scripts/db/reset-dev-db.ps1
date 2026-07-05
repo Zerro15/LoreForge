@@ -27,8 +27,12 @@ function Wait-PostgresHealthy {
         $status = docker inspect --format "{{.State.Health.Status}}" $ContainerName 2>$null
 
         if ($LASTEXITCODE -eq 0 -and $status -eq "healthy") {
-            Write-Host "PostgreSQL is healthy." -ForegroundColor Green
-            return
+            docker exec $ContainerName psql -U $DatabaseUser -d $DatabaseName -At -c "SELECT 1;" *> $null
+
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "PostgreSQL is healthy and accepts queries." -ForegroundColor Green
+                return
+            }
         }
 
         Start-Sleep -Seconds 2

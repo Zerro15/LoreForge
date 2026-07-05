@@ -89,7 +89,7 @@ export default function LoginPage() {
           </div>
 
           <div className="mt-8 border-t border-[#273244]/70 pt-6 text-xs leading-5 text-[#6f7787]">
-            Demo credentials: `bogdan@example.com` / `password123`
+            Демо-доступы: `admin@loreforge.local` / `password123`
           </div>
         </Card>
       </div>
