@@ -243,7 +243,7 @@ alice@example.com / password123
 
 MVP prototype / early product development.
 
-Проект уже можно запустить локально и пройти end-to-end flow: база данных, seed, backend API, frontend dashboard, auth, базовые роли, visibility и dice roll работают вместе. Следующий фокус — CRUD и углубление permissions.
+Проект уже можно запустить локально и пройти end-to-end flow: база данных, seed, backend API, frontend dashboard, auth, базовые роли, visibility, dice roll, NPC CRUD и Character CRUD работают вместе. Следующий фокус — дальнейшее расширение CRUD и углубление permissions.
 
 ## Что сделано
 
@@ -256,6 +256,8 @@ MVP prototype / early product development.
 - Email/password auth with httpOnly session cookies.
 - Базовый Roles & Access Control для `owner/gm/co_gm/player/viewer`.
 - Маскирование GM secrets для player/viewer.
+- CRUD персонажей с `private_notes`, `gm_notes`, soft archive и audit log.
+- CRUD NPC с тегами, visibility, soft archive и audit log.
 - Next.js frontend.
 - Dark SaaS UI polish.
 - Demo flow на 2-3 минуты.
@@ -265,7 +267,8 @@ MVP prototype / early product development.
 
 Подробный план: [docs/development-plan.md](docs/development-plan.md).
 
-- CRUD кампаний, персонажей, NPC и локаций.
+- CRUD кампаний и локаций.
+- Расширение персонажей: аватары, лист персонажа, прогрессия.
 - Более детальные права доступа для `SecretBlock` и `gm_note`.
 - WebSocket chat.
 - Campaign editor.

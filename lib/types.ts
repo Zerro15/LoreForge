@@ -81,16 +81,30 @@ export type Dashboard = {
 
 export type Character = {
   character_id: string;
+  campaign_id?: string;
+  owner_user_id: string | null;
+  created_by_user_id?: string | null;
+  current_location_id?: string | null;
+  current_scene_id?: string | null;
+  avatar_attachment_id?: string | null;
   name: string;
+  title: string | null;
   public_description: string | null;
+  private_notes: string | null;
+  gm_notes: string | null;
   secret_description: string | null;
   notes: string | null;
   status_text: string | null;
+  visibility: Visibility;
+  status: "active" | "archived";
+  archived_at: string | null;
+  created_at?: string;
+  updated_at?: string;
   owner: {
-    user_id: number;
+    user_id: string;
     username: string;
     display_name: string;
-  };
+  } | null;
   stats: Array<{ name: string; value: number }>;
   resources: Array<{
     name: string;

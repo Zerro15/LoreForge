@@ -66,7 +66,7 @@ LoreForge продолжаем развивать как полноценный 
 
 Цель: перейти от read-only demo к управлению кампанией из UI.
 
-Статус: первый CRUD для NPC уже добавлен.
+Статус: CRUD для NPC и персонажей уже добавлен.
 
 Готово:
 
@@ -77,13 +77,16 @@ LoreForge продолжаем развивать как полноценный 
 - visibility-aware чтение NPC;
 - скрытие секретов NPC для `player/viewer`;
 - audit log для `npc.create`, `npc.update`, `npc.archive`.
+- создание персонажа;
+- редактирование персонажа;
+- soft archive персонажа;
+- role-aware доступ к `private_notes` и `gm_notes`;
+- audit log для `character.create`, `character.update`, `character.archive`.
 
-Следующий крупный фокус: Campaign/Character CRUD или расширение NPC привязками к локациям.
+Следующий крупный фокус: Campaign settings CRUD или Location CRUD polish.
 
 - создание кампании;
 - редактирование кампании;
-- создание персонажа;
-- редактирование персонажа;
 - редактирование локаций;
 - привязка NPC к локациям после отдельного решения по модели данных;
 - предметы и инвентарь;
@@ -143,7 +146,6 @@ LoreForge продолжаем развивать как полноценный 
 Следующий крупный этап — выбрать следующий CRUD-фокус:
 
 - Campaign settings CRUD;
-- Character CRUD;
 - расширение NPC CRUD связью с локациями;
 - Location CRUD polish;
 - добавить минимальные API tests;

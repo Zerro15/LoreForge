@@ -56,6 +56,71 @@ ALTER TABLE investigation ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NU
 ALTER TABLE investigation_link ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE investigation_link ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- 1.1. Character CRUD metadata.
+
+ALTER TABLE character
+    ALTER COLUMN owner_user_id DROP NOT NULL;
+
+ALTER TABLE character
+    ADD COLUMN IF NOT EXISTS title TEXT;
+
+ALTER TABLE character
+    ADD COLUMN IF NOT EXISTS private_notes TEXT;
+
+ALTER TABLE character
+    ADD COLUMN IF NOT EXISTS gm_notes TEXT;
+
+ALTER TABLE character
+    ADD COLUMN IF NOT EXISTS avatar_attachment_id BIGINT;
+
+ALTER TABLE character
+    ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+
+ALTER TABLE character
+    ADD COLUMN IF NOT EXISTS visibility visibility_scope NOT NULL DEFAULT 'party_only';
+
+ALTER TABLE character
+    ADD COLUMN IF NOT EXISTS created_by_user_id BIGINT;
+
+ALTER TABLE character
+    ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+
+UPDATE character
+SET created_by_user_id = owner_user_id
+WHERE created_by_user_id IS NULL
+  AND owner_user_id IS NOT NULL;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'character_status_check'
+    ) THEN
+        ALTER TABLE character
+            ADD CONSTRAINT character_status_check
+            CHECK (status IN ('active', 'archived'));
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'character_created_by_user_fk'
+    ) THEN
+        ALTER TABLE character
+            ADD CONSTRAINT character_created_by_user_fk
+            FOREIGN KEY (created_by_user_id)
+            REFERENCES app_user(user_id)
+            ON DELETE SET NULL;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'character_avatar_attachment_fk'
+    ) THEN
+        ALTER TABLE character
+            ADD CONSTRAINT character_avatar_attachment_fk
+            FOREIGN KEY (avatar_attachment_id)
+            REFERENCES attachment(attachment_id)
+            ON DELETE SET NULL;
+    END IF;
+END $$;
+
 -- 2. Campaign lifecycle and cover.
 
 ALTER TABLE campaign
@@ -807,6 +872,9 @@ CREATE INDEX IF NOT EXISTS idx_campaign_plugin_campaign_id ON campaign_plugin(ca
 CREATE INDEX IF NOT EXISTS idx_campaign_plugin_world_plugin_id ON campaign_plugin(world_plugin_id);
 CREATE INDEX IF NOT EXISTS idx_plugin_source_plugin_feature_id ON plugin(source_plugin_feature_id);
 
+CREATE INDEX IF NOT EXISTS idx_character_campaign_visibility ON character(campaign_id, visibility);
+CREATE INDEX IF NOT EXISTS idx_character_campaign_status ON character(campaign_id, status);
+CREATE INDEX IF NOT EXISTS idx_character_owner_user_id ON character(owner_user_id);
 CREATE INDEX IF NOT EXISTS idx_character_stat_character_id ON character_stat(character_id);
 CREATE INDEX IF NOT EXISTS idx_character_stat_source_plugin_feature_id ON character_stat(source_plugin_feature_id);
 CREATE INDEX IF NOT EXISTS idx_character_resource_character_id ON character_resource(character_id);

@@ -563,7 +563,8 @@ export function TravelRequestModal({
   onSent: () => void;
 }) {
   const ownCharacters = characters.filter(
-    (character) => String(character.owner.user_id) === String(currentUser?.user_id)
+    (character) =>
+      String(character.owner?.user_id) === String(currentUser?.user_id)
   );
   const [targetLocationId, setTargetLocationId] = useState(
     locations[0]?.location_id ?? ""
@@ -896,7 +897,7 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
                   >
                     <div className="font-semibold">{character.name}</div>
                     <div className="text-xs text-[#9CA3AF]">
-                      {character.owner.display_name}
+                      {character.owner?.display_name ?? "Без владельца"}
                     </div>
                     <p className="mt-2 line-clamp-2 text-sm text-[#c7ccd6]">
                       {character.status_text ?? character.public_description}
