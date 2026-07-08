@@ -1,10 +1,19 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { getCampaignAccess } from "../access/campaignAccess";
-import { query } from "../db";
+import { query, withTransaction } from "../db";
+import { realtimeRooms } from "../realtime/rooms";
+import { LocationService } from "../services/LocationService";
 
 const campaignParamsSchema = z.object({
   campaignId: z.coerce.number().int().positive()
+});
+
+const visibilitySchema = z.enum(["public", "party_only"]);
+
+const chatMessageBodySchema = z.object({
+  content: z.string().trim().min(1).max(2000),
+  visibility: visibilitySchema.default("party_only")
 });
 
 export async function chatRoutes(app: FastifyInstance) {
@@ -73,5 +82,54 @@ export async function chatRoutes(app: FastifyInstance) {
       `,
       [campaignId, access.permissions.canViewGMSecrets, access.user.user_id, String(access.user.user_id)]
     );
+  });
+
+  app.post("/api/campaigns/:campaignId/chat", async (request, reply) => {
+    const { campaignId } = campaignParamsSchema.parse(request.params);
+    const access = await getCampaignAccess(request, campaignId);
+
+    if (!access) {
+      const error = new Error("Campaign membership required");
+      error.name = "Forbidden";
+      throw error;
+    }
+
+    if (access.member.role === "viewer") {
+      return reply.code(403).send({ error: "Viewer role cannot send chat messages" });
+    }
+
+    const body = chatMessageBodySchema.parse(request.body);
+
+    const message = await withTransaction(async (client) => {
+      const chatId = await LocationService.ensureCampaignChat(client, campaignId);
+      const inserted = await client.query(
+        `
+        INSERT INTO chat_message (
+          chat_id,
+          sender_user_id,
+          body,
+          message_type,
+          visibility,
+          metadata_json
+        )
+        VALUES ($1, $2, $3, 'text', $4, '{}'::JSONB)
+        RETURNING *
+        `,
+        [chatId, access.user.user_id, body.content, body.visibility]
+      );
+
+      return inserted.rows[0];
+    });
+
+    realtimeRooms.broadcast(campaignId, {
+      type: "chat.message.created",
+      payload: {
+        campaignId: String(campaignId),
+        messageId: String(message.message_id),
+        visibility: message.visibility as string
+      }
+    });
+
+    return reply.code(201).send(message);
   });
 }
