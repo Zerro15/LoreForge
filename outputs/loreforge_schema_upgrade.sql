@@ -864,6 +864,36 @@ CREATE TABLE IF NOT EXISTS scene_token (
         )
 );
 
+-- 14.2. Fog of war and per-player map visibility.
+
+CREATE TABLE IF NOT EXISTS scene_visibility_layer (
+    scene_visibility_layer_id BIGSERIAL PRIMARY KEY,
+    scene_id BIGINT NOT NULL REFERENCES scene(scene_id) ON DELETE CASCADE,
+    campaign_id BIGINT NOT NULL REFERENCES campaign(campaign_id) ON DELETE CASCADE,
+    type TEXT NOT NULL,
+    geometry_data JSONB NOT NULL DEFAULT '{}'::JSONB,
+    visibility TEXT NOT NULL DEFAULT 'gm_only',
+    created_by_user_id BIGINT REFERENCES app_user(user_id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT scene_visibility_layer_type_check
+        CHECK (type IN ('fog', 'revealed_area', 'blocked_area')),
+    CONSTRAINT scene_visibility_layer_visibility_check
+        CHECK (visibility IN ('public', 'gm_only'))
+);
+
+CREATE TABLE IF NOT EXISTS player_scene_visibility (
+    player_scene_visibility_id BIGSERIAL PRIMARY KEY,
+    campaign_id BIGINT NOT NULL REFERENCES campaign(campaign_id) ON DELETE CASCADE,
+    scene_id BIGINT NOT NULL REFERENCES scene(scene_id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL REFERENCES app_user(user_id) ON DELETE CASCADE,
+    revealed_data JSONB NOT NULL DEFAULT '{}'::JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT player_scene_visibility_scene_user_unique
+        UNIQUE (scene_id, user_id)
+);
+
 -- 15. Indexes for new access patterns.
 
 CREATE INDEX IF NOT EXISTS idx_campaign_status ON campaign(status);
@@ -885,6 +915,10 @@ CREATE INDEX IF NOT EXISTS idx_scene_player_state_user ON scene_player_state(use
 CREATE INDEX IF NOT EXISTS idx_scene_token_scene_id ON scene_token(scene_id, status);
 CREATE INDEX IF NOT EXISTS idx_scene_token_campaign_id ON scene_token(campaign_id, status);
 CREATE INDEX IF NOT EXISTS idx_scene_token_entity ON scene_token(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_scene_visibility_layer_scene ON scene_visibility_layer(scene_id, visibility);
+CREATE INDEX IF NOT EXISTS idx_scene_visibility_layer_campaign_type ON scene_visibility_layer(campaign_id, type);
+CREATE INDEX IF NOT EXISTS idx_player_scene_visibility_scene_user ON player_scene_visibility(scene_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_player_scene_visibility_campaign_user ON player_scene_visibility(campaign_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_item_campaign_visibility ON item(campaign_id, visibility);
 CREATE INDEX IF NOT EXISTS idx_attachment_campaign_visibility ON attachment(campaign_id, visibility);
 CREATE INDEX IF NOT EXISTS idx_attachment_campaign_storage ON attachment(campaign_id, storage_kind);
