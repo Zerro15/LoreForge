@@ -133,6 +133,26 @@ UI учитывает флаги:
 
 Ручная проверка ролей описана в `docs/manual-role-test.md`.
 
+## Realtime
+
+Play Room подключается к WebSocket через `RealtimeProvider`.
+
+Env:
+
+```env
+NEXT_PUBLIC_WS_URL=ws://localhost:3001
+```
+
+Когда приходят события `scene.changed`, `token.created`, `token.updated`, `token.deleted`, `player.moved`, `chat.message.created` или `dice.rolled`, frontend обновляет данные через REST API. Это сохраняет REST как источник истины и даёт live updates без сложного client-side cache.
+
+В интерфейсе Play Room показывается статус:
+
+- `Подключено`;
+- `Подключение...`;
+- `Нет соединения`.
+
+Подробнее: `docs/realtime.md`.
+
 ## UI labels
 
 Backend enums и API contracts остаются на английском, но пользовательский интерфейс показывает русские подписи через `lib/ui-labels.ts`.
