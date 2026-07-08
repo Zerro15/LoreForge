@@ -440,6 +440,51 @@ curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/scenes/3/
   -d '{"userId":2,"characterId":1,"reason":"Игрок вошёл в торговый зал."}'
 ```
 
+## Токены карты
+
+Токены отображаются поверх карты сцены в Play Room. Позиция хранится в процентах `x/y`.
+
+### GET `/api/campaigns/:campaignId/scenes/:sceneId/tokens`
+
+Возвращает токены сцены:
+
+- ГМ видит `public`, `gm_only` и `hidden`;
+- player/viewer видят только `public`.
+
+```powershell
+curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/scenes/3/tokens
+```
+
+### POST `/api/campaigns/:campaignId/scenes/:sceneId/tokens`
+
+Создаёт токен. Только `owner/gm/co_gm`.
+
+```powershell
+curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/scenes/3/tokens `
+  -H "Content-Type: application/json" `
+  -d '{"entityType":"marker","label":"Дверь","x":15,"y":78,"size":0.75,"visibility":"public"}'
+```
+
+Для `character` и `npc` нужно передать `entityId`. Для `marker` `entityId` не нужен.
+
+### PATCH `/api/campaigns/:campaignId/tokens/:tokenId`
+
+Обновляет позицию, размер, подпись или видимость токена. Только ГМ.
+
+```powershell
+curl -b work\cookies.txt -X PATCH http://localhost:3001/api/campaigns/1/tokens/5 `
+  -H "Content-Type: application/json" `
+  -d '{"x":42,"y":55,"visibility":"gm_only"}'
+```
+
+### DELETE `/api/campaigns/:campaignId/tokens/:tokenId`
+
+Архивирует токен через `status = archived`.
+
+```powershell
+curl -b work\cookies.txt -X DELETE http://localhost:3001/api/campaigns/1/tokens/5
+```
+
 ### POST `/api/campaigns/:campaignId/locations/:locationId/grant-access`
 
 Открывает локацию игроку. Только для ГМа.

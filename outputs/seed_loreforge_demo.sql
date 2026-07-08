@@ -373,8 +373,84 @@ npc_seed AS (
             'Появился после разговора с Моррисом.',
             'Следит',
             'gm_only'
-        )
+    )
     RETURNING npc_id, name
+),
+scene_token_seed AS (
+    INSERT INTO scene_token (
+        scene_id,
+        campaign_id,
+        entity_type,
+        entity_id,
+        x,
+        y,
+        label,
+        size,
+        visibility,
+        created_by_user_id
+    )
+    VALUES
+        (
+            (SELECT scene_id FROM scene_seed WHERE name = 'Торговый зал'),
+            (SELECT campaign_id FROM campaign_seed),
+            'character',
+            (SELECT character_id FROM character_seed WHERE name = 'Артур Вейн'),
+            30,
+            50,
+            'Артур Вейн',
+            1,
+            'public',
+            (SELECT user_id FROM users_seed WHERE username = 'admin_gm')
+        ),
+        (
+            (SELECT scene_id FROM scene_seed WHERE name = 'Торговый зал'),
+            (SELECT campaign_id FROM campaign_seed),
+            'character',
+            (SELECT character_id FROM character_seed WHERE name = 'Элиза Морроу'),
+            45,
+            50,
+            'Элиза',
+            1,
+            'public',
+            (SELECT user_id FROM users_seed WHERE username = 'admin_gm')
+        ),
+        (
+            (SELECT scene_id FROM scene_seed WHERE name = 'Торговый зал'),
+            (SELECT campaign_id FROM campaign_seed),
+            'npc',
+            (SELECT npc_id FROM npc_seed WHERE name = 'Аптекарь Моррис'),
+            70,
+            20,
+            'Аптекарь Моррис',
+            1,
+            'gm_only',
+            (SELECT user_id FROM users_seed WHERE username = 'admin_gm')
+        ),
+        (
+            (SELECT scene_id FROM scene_seed WHERE name = 'Торговый зал'),
+            (SELECT campaign_id FROM campaign_seed),
+            'marker',
+            NULL,
+            58,
+            42,
+            'Стол',
+            0.85,
+            'public',
+            (SELECT user_id FROM users_seed WHERE username = 'admin_gm')
+        ),
+        (
+            (SELECT scene_id FROM scene_seed WHERE name = 'Торговый зал'),
+            (SELECT campaign_id FROM campaign_seed),
+            'marker',
+            NULL,
+            15,
+            78,
+            'Дверь',
+            0.75,
+            'public',
+            (SELECT user_id FROM users_seed WHERE username = 'admin_gm')
+        )
+    RETURNING scene_token_id
 ),
 item_seed AS (
     INSERT INTO item (
@@ -649,6 +725,7 @@ SELECT
     (SELECT COUNT(*) FROM item_seed) AS items_created,
     (SELECT COUNT(*) FROM location_seed) AS locations_created,
     (SELECT COUNT(*) FROM scene_seed) AS scenes_created,
+    (SELECT COUNT(*) FROM scene_token_seed) AS scene_tokens_created,
     (SELECT COUNT(*) FROM session_event_seed) AS session_events_created,
     (SELECT COUNT(*) FROM chat_message_seed) AS chat_messages_created;
 
