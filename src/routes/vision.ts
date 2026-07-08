@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { realtimeRooms } from "../realtime/rooms";
 import { VisionService } from "../services/VisionService";
 
 const campaignSceneParamsSchema = z.object({
@@ -51,6 +52,16 @@ export async function visionRoutes(app: FastifyInstance) {
       body
     );
 
+    realtimeRooms.broadcast(campaignId, {
+      type: "vision.updated",
+      payload: {
+        campaignId: String(campaignId),
+        sceneId: String(sceneId),
+        userId: String(body.userId),
+        visibilityData: visibility
+      }
+    });
+
     return {
       ok: true,
       visibility
@@ -67,6 +78,16 @@ export async function visionRoutes(app: FastifyInstance) {
       userId
     );
 
+    realtimeRooms.broadcast(campaignId, {
+      type: "vision.updated",
+      payload: {
+        campaignId: String(campaignId),
+        sceneId: String(sceneId),
+        userId: String(userId),
+        visibilityData: visibility
+      }
+    });
+
     return {
       ok: true,
       visibility
@@ -82,6 +103,18 @@ export async function visionRoutes(app: FastifyInstance) {
       sceneId,
       body
     );
+
+    if (body.userId) {
+      realtimeRooms.broadcast(campaignId, {
+        type: "vision.updated",
+        payload: {
+          campaignId: String(campaignId),
+          sceneId: String(sceneId),
+          userId: String(body.userId),
+          visibilityData: visibility
+        }
+      });
+    }
 
     return {
       ok: true,

@@ -6,6 +6,7 @@ export type RealtimeEventType =
   | "token.updated"
   | "token.deleted"
   | "player.moved"
+  | "vision.updated"
   | "chat.message.created"
   | "dice.rolled";
 
@@ -61,19 +62,35 @@ export type DiceRolledEvent = {
   };
 };
 
+export type VisionUpdatedEvent = {
+  type: "vision.updated";
+  payload: {
+    campaignId: string;
+    sceneId: string;
+    userId: string;
+    visibilityData: unknown;
+  };
+};
+
 export type RealtimeEvent =
   | SceneChangedEvent
   | TokenEvent
   | PlayerMovedEvent
+  | VisionUpdatedEvent
   | ChatMessageCreatedEvent
   | DiceRolledEvent;
 
 export function canReceiveRealtimeEvent(
   permissions: CurrentMemberPermissions,
-  event: RealtimeEvent
+  event: RealtimeEvent,
+  userId?: string | number
 ) {
   if (permissions.canViewGMSecrets) {
     return true;
+  }
+
+  if (event.type === "vision.updated") {
+    return String(event.payload.userId) === String(userId);
   }
 
   if (event.type === "token.created" || event.type === "token.updated" || event.type === "token.deleted") {

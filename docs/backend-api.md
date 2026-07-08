@@ -505,6 +505,54 @@ curl -b work\cookies.txt -X PATCH http://localhost:3001/api/campaigns/1/tokens/5
 curl -b work\cookies.txt -X DELETE http://localhost:3001/api/campaigns/1/tokens/5
 ```
 
+## Fog of War
+
+Fog of War хранит общие слои сцены и персонально открытые области для игроков.
+
+### GET `/api/campaigns/:campaignId/scenes/:sceneId/visibility`
+
+Возвращает видимость сцены для текущего пользователя:
+
+- GM получает полный обзор и служебные слои;
+- player получает только свои открытые области;
+- viewer не получает GM-слои.
+
+```powershell
+curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/scenes/3/visibility
+```
+
+### POST `/api/campaigns/:campaignId/scenes/:sceneId/reveal`
+
+Открывает область карты конкретному игроку. Только `owner/gm/co_gm`.
+
+```powershell
+curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/scenes/3/reveal `
+  -H "Content-Type: application/json" `
+  -d '{"userId":4,"area":{"type":"rect","x":18,"y":18,"width":34,"height":34}}'
+```
+
+### POST `/api/campaigns/:campaignId/scenes/:sceneId/reveal-all`
+
+Открывает всю карту конкретному игроку. Только `owner/gm/co_gm`.
+
+```powershell
+curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/scenes/3/reveal-all `
+  -H "Content-Type: application/json" `
+  -d '{"userId":4}'
+```
+
+### POST `/api/campaigns/:campaignId/scenes/:sceneId/hide-area`
+
+Скрывает область карты. Если передан `userId`, изменение применяется к персональной видимости игрока.
+
+```powershell
+curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/scenes/3/hide-area `
+  -H "Content-Type: application/json" `
+  -d '{"userId":4,"area":{"type":"rect","x":46,"y":46,"width":28,"height":28}}'
+```
+
+После `reveal`, `reveal-all` и персонального `hide-area` backend отправляет WebSocket событие `vision.updated`.
+
 ### POST `/api/campaigns/:campaignId/locations/:locationId/grant-access`
 
 Открывает локацию игроку. Только для ГМа.

@@ -63,7 +63,7 @@ export class RealtimeRooms {
     for (const client of room) {
       if (
         client.socket.readyState === SOCKET_OPEN &&
-        canReceiveRealtimeEvent(client.permissions, event)
+        canReceiveRealtimeEvent(client.permissions, event, client.user.user_id)
       ) {
         client.socket.send(payload);
       }

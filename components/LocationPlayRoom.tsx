@@ -1704,6 +1704,7 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
         event.type === "token.created" ||
         event.type === "token.updated" ||
         event.type === "token.deleted" ||
+        event.type === "vision.updated" ||
         event.type === "chat.message.created" ||
         event.type === "dice.rolled"
       ) {

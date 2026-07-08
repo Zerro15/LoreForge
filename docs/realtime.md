@@ -55,7 +55,8 @@ campaign:{campaignId}
 - `owner/gm/co_gm` получают все события;
 - `player` и `viewer` получают только public token events;
 - `viewer` не получает секретные сцены и gm-only tokens;
-- `gm_only` и `hidden` token events не отправляются игрокам/viewer.
+- `gm_only` и `hidden` token events не отправляются игрокам/viewer;
+- `vision.updated` получают GM и только тот игрок, для которого изменилась видимость.
 
 ## События
 
@@ -90,6 +91,22 @@ campaign:{campaignId}
 
 Отправляется после перемещения игрока ГМом на сцену.
 
+### `vision.updated`
+
+Отправляется после изменения Fog of War для конкретного игрока.
+
+```json
+{
+  "type": "vision.updated",
+  "payload": {
+    "campaignId": "1",
+    "sceneId": "3",
+    "userId": "4",
+    "visibilityData": {}
+  }
+}
+```
+
 ### `chat.message.created`
 
 Отправляется после создания chat message.
@@ -105,6 +122,7 @@ campaign:{campaignId}
 - перемещение токена;
 - удаление токена;
 - перемещение игрока на сцену;
+- изменение видимости карты;
 - новые сообщения чата;
 - броски кубиков.
 
@@ -117,6 +135,6 @@ Frontend при событии обновляет данные через REST. 
 - Нет combat.
 - Нет initiative.
 - Нет damage.
-- Нет fog of war.
+- Нет динамического освещения и line of sight для Fog of War.
 - Нет voice/video.
 - Нет сложной синхронизации canvas.

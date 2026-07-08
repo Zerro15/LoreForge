@@ -31,6 +31,15 @@ export type RealtimeEvent =
       };
     }
   | {
+      type: "vision.updated";
+      payload: {
+        campaignId: string;
+        sceneId: string;
+        userId: string;
+        visibilityData: unknown;
+      };
+    }
+  | {
       type: "chat.message.created" | "dice.rolled";
       payload: {
         campaignId: string;
