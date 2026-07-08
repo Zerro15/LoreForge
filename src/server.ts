@@ -14,6 +14,7 @@ import { diceRoutes } from "./routes/dice";
 import { locationsRoutes } from "./routes/locations";
 import { npcsRoutes } from "./routes/npcs";
 import { pluginsRoutes } from "./routes/plugins";
+import { scenesRoutes } from "./routes/scenes";
 import { sessionLogsRoutes } from "./routes/sessionLogs";
 
 const app = Fastify({
@@ -86,6 +87,7 @@ app.register(diceRoutes);
 app.register(locationsRoutes);
 app.register(npcsRoutes);
 app.register(pluginsRoutes);
+app.register(scenesRoutes);
 app.register(sessionLogsRoutes);
 
 async function start() {

@@ -362,6 +362,84 @@ curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/locations
   -F "file=@C:\path\to\location.jpg"
 ```
 
+## Сцены локаций
+
+`Location` остаётся контейнером мира, а `Scene` описывает конкретную игровую карту внутри локации: торговый зал, подвал, часовню, переулок.
+
+### GET `/api/campaigns/:campaignId/scenes`
+
+Возвращает сцены с учётом роли текущего пользователя. Можно передать `locationId` query-параметром.
+
+ГМ видит все сцены и `gm_description`. Игрок видит публичные, party-only и открытые ему сцены. Viewer видит только public-сцены.
+
+```powershell
+curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/scenes
+curl -b work\cookies.txt "http://localhost:3001/api/campaigns/1/scenes?locationId=3"
+```
+
+### GET `/api/campaigns/:campaignId/locations/:locationId/scenes`
+
+Возвращает сцены конкретной локации.
+
+```powershell
+curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/locations/3/scenes
+```
+
+### POST `/api/campaigns/:campaignId/locations/:locationId/scenes`
+
+Создаёт сцену внутри локации. Только `owner/gm/co_gm`.
+
+```powershell
+curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/locations/3/scenes `
+  -H "Content-Type: application/json" `
+  -d '{"name":"Подвал","sceneType":"investigation","publicDescription":"Сырой подвал под аптекой.","gmDescription":"В стене спрятан тайник.","visibility":"hidden_until_discovered"}'
+```
+
+### PATCH `/api/campaigns/:campaignId/scenes/:sceneId`
+
+Редактирует название, описания, visibility, sort order и status сцены. Только для ГМа.
+
+```powershell
+curl -b work\cookies.txt -X PATCH http://localhost:3001/api/campaigns/1/scenes/7 `
+  -H "Content-Type: application/json" `
+  -d '{"visibility":"party_only"}'
+```
+
+### DELETE `/api/campaigns/:campaignId/scenes/:sceneId`
+
+Архивирует сцену через `status = archived`. Физически сцена не удаляется.
+
+```powershell
+curl -b work\cookies.txt -X DELETE http://localhost:3001/api/campaigns/1/scenes/7
+```
+
+### POST `/api/campaigns/:campaignId/scenes/:sceneId/activate`
+
+Делает сцену активной в Play Room и синхронно обновляет активную локацию кампании.
+
+```powershell
+curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/scenes/3/activate
+```
+
+### POST `/api/campaigns/:campaignId/scenes/:sceneId/image`
+
+Загружает карту сцены. Ограничения такие же, как у картинки локации: `png/jpeg/webp`, до 10 MB, локальное хранение в `uploads/`.
+
+```powershell
+curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/scenes/3/image `
+  -F "file=@C:\path\to\scene-map.webp"
+```
+
+### POST `/api/campaigns/:campaignId/scenes/:sceneId/move-player`
+
+ГМ перемещает игрока на сцену. Backend обновляет `campaign_member.current_location_id/current_scene_id`, открывает доступ к локации и помечает сцену как известную через `scene_player_state`.
+
+```powershell
+curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/scenes/3/move-player `
+  -H "Content-Type: application/json" `
+  -d '{"userId":2,"characterId":1,"reason":"Игрок вошёл в торговый зал."}'
+```
+
 ### POST `/api/campaigns/:campaignId/locations/:locationId/grant-access`
 
 Открывает локацию игроку. Только для ГМа.

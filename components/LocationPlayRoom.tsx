@@ -17,9 +17,12 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import {
   activateLocation,
+  activateScene,
   approveGmRequest,
   archiveLocation,
+  archiveScene,
   createLocation,
+  createScene,
   createTravelRequest,
   getCharacters,
   getChat,
@@ -27,10 +30,13 @@ import {
   getDashboard,
   getGmRequests,
   getLocations,
+  getScenes,
   grantLocationAccess,
+  movePlayerToScene,
   rejectGmRequest,
   revokeLocationAccess,
   updateLocation,
+  uploadSceneImage,
   uploadLocationImage
 } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/config";
@@ -42,6 +48,7 @@ import type {
   Dashboard,
   GMRequest,
   Location,
+  Scene,
   Visibility
 } from "@/lib/types";
 import {
@@ -59,6 +66,7 @@ import { Badge, Button, Card, EmptyState, ErrorState, Input } from "./ui";
 type PlayRoomState = {
   dashboard: Dashboard | null;
   locations: Location[];
+  scenes: Scene[];
   characters: Character[];
   messages: ChatMessageType[];
   gmRequests: GMRequest[];
@@ -173,6 +181,76 @@ export function LocationImageCard({ location }: { location: Location | null }) {
   );
 }
 
+export function SceneImageCard({
+  scene,
+  location,
+  isGm
+}: {
+  scene: Scene | null;
+  location: Location | null;
+  isGm: boolean;
+}) {
+  const imageUrl = resolveAssetUrl(scene?.image?.attachment?.public_url);
+
+  return (
+    <div className="relative min-h-[620px] overflow-hidden rounded-3xl border border-[#273244]/90 bg-[#0B0F17]">
+      {imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          alt={scene?.name ?? "Сцена"}
+          className="absolute inset-0 h-full w-full object-cover"
+          src={imageUrl}
+        />
+      ) : (
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_32%_24%,rgba(139,92,246,0.26),transparent_34%),linear-gradient(135deg,#111827,#0B0F17_54%,#171A26)]" />
+      )}
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:64px_64px]" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F17] via-[#0B0F17]/28 to-[#0B0F17]/10" />
+
+      {isGm ? (
+        <div className="absolute right-4 top-4 rounded-2xl border border-[#273244] bg-[#0B0F17]/80 p-3 text-xs text-[#c7ccd6] shadow-xl backdrop-blur">
+          <div className="mb-2 font-semibold text-[#F5F2EA]">NPC-инструменты</div>
+          <div className="space-y-1">
+            <div>Маркеры NPC: видны только ГМу</div>
+            <div>Токены и боёвка: позже</div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="relative flex min-h-[620px] flex-col justify-end p-7">
+        <div className="flex flex-wrap gap-2">
+          <Badge tone="purple">Сцена</Badge>
+          {scene?.is_current_for_user ? <Badge tone="green">Вы здесь</Badge> : null}
+          {scene?.visibility ? (
+            <Badge tone={scene.visibility === "gm_only" ? "danger" : "gold"}>
+              {getLabel(visibilityLabels, scene.visibility)}
+            </Badge>
+          ) : null}
+        </div>
+        <p className="mt-4 text-sm text-[#9CA3AF]">
+          {location?.name ?? scene?.location?.name ?? "Локация не выбрана"}
+        </p>
+        <h2 className="mt-1 text-4xl font-semibold tracking-tight">
+          {scene?.name ?? "Сцена не выбрана"}
+        </h2>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-[#c7ccd6]">
+          {scene?.public_description ??
+            "Картинка сцены ещё не загружена. ГМ может добавить карту в управлении локациями."}
+        </p>
+        {isGm && scene?.gm_description ? (
+          <div className="mt-4 max-w-3xl rounded-2xl border border-dashed border-[#D6A84F]/45 bg-[#D6A84F]/10 p-3 text-sm text-[#f0dca8]">
+            <div className="mb-1 flex items-center gap-2 font-semibold">
+              <Lock size={14} />
+              Секрет ГМа
+            </div>
+            {scene.gm_description}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function LocationPicker({
   locations,
   activeLocationId,
@@ -257,6 +335,289 @@ export function UploadLocationImageButton({
   );
 }
 
+export function UploadSceneImageButton({
+  campaignId,
+  sceneId,
+  onUploaded
+}: {
+  campaignId: string;
+  sceneId: string;
+  onUploaded: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    const result = await uploadSceneImage(campaignId, sceneId, file);
+    setBusy(false);
+
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+
+    onUploaded();
+  }
+
+  return (
+    <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#273244] bg-[#171A26]/90 px-3 py-2 text-xs font-semibold text-[#F5F2EA] transition hover:border-[#8B5CF6]/70">
+      <ImagePlus size={14} />
+      {busy ? "Загрузка..." : "Карта"}
+      <input
+        accept="image/png,image/jpeg,image/webp"
+        className="hidden"
+        onChange={onFileChange}
+        type="file"
+      />
+      {error ? <span className="text-[#e89a9a]">{error}</span> : null}
+    </label>
+  );
+}
+
+export function SceneManagerPanel({
+  campaignId,
+  locations,
+  scenes,
+  members,
+  characters,
+  activeSceneId,
+  onChanged
+}: {
+  campaignId: string;
+  locations: Location[];
+  scenes: Scene[];
+  members: Dashboard["members"];
+  characters: Character[];
+  activeSceneId?: string | null;
+  onChanged: () => void;
+}) {
+  const [locationId, setLocationId] = useState(locations[0]?.location_id ?? "");
+  const [name, setName] = useState("");
+  const [publicDescription, setPublicDescription] = useState("");
+  const [gmDescription, setGmDescription] = useState("");
+  const [visibility, setVisibility] = useState<Visibility>("party_only");
+  const [moveUserId, setMoveUserId] = useState(
+    members.find((member) => member.role === "player")?.user_id ?? ""
+  );
+  const [moveCharacterId, setMoveCharacterId] = useState("");
+  const [moveReason, setMoveReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const playerMembers = members.filter((member) => !isGmRole(member.role));
+
+  async function submitCreate(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+
+    const result = await createScene(campaignId, locationId, {
+      name,
+      publicDescription,
+      gmDescription,
+      visibility
+    });
+
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+
+    setName("");
+    setPublicDescription("");
+    setGmDescription("");
+    onChanged();
+  }
+
+  async function activate(sceneId: string) {
+    const result = await activateScene(campaignId, sceneId);
+    setError(result.error);
+    if (!result.error) {
+      onChanged();
+    }
+  }
+
+  async function archive(sceneId: string) {
+    const result = await archiveScene(campaignId, sceneId);
+    setError(result.error);
+    if (!result.error) {
+      onChanged();
+    }
+  }
+
+  async function move(sceneId: string) {
+    if (!moveUserId) {
+      setError("Выберите игрока для перемещения.");
+      return;
+    }
+
+    const result = await movePlayerToScene(campaignId, sceneId, {
+      userId: Number(moveUserId),
+      characterId: moveCharacterId ? Number(moveCharacterId) : null,
+      reason: moveReason || null
+    });
+
+    setError(result.error);
+    if (!result.error) {
+      onChanged();
+    }
+  }
+
+  return (
+    <Card className="p-4">
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold">Сцены локаций</h3>
+        <p className="mt-1 text-sm text-[#9CA3AF]">
+          Сцена — конкретная карта внутри локации: зал, подвал, переулок или
+          временная игровая область.
+        </p>
+      </div>
+
+      {error ? <div className="mb-3 text-sm text-[#e89a9a]">{error}</div> : null}
+
+      <form className="mb-5 grid gap-3 md:grid-cols-2" onSubmit={(event) => void submitCreate(event)}>
+        <select
+          className="h-12 rounded-xl border border-[#273244] bg-[#0B0F17] px-3 text-sm"
+          onChange={(event) => setLocationId(event.target.value)}
+          value={locationId}
+        >
+          {locations.map((location) => (
+            <option key={location.location_id} value={location.location_id}>
+              {location.name}
+            </option>
+          ))}
+        </select>
+        <Input
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Название сцены"
+          required
+          value={name}
+        />
+        <textarea
+          className="min-h-20 rounded-xl border border-[#273244] bg-[#0B0F17]/55 px-4 py-3 text-sm outline-none focus:border-[#8B5CF6]"
+          onChange={(event) => setPublicDescription(event.target.value)}
+          placeholder="Описание для игроков"
+          value={publicDescription}
+        />
+        <textarea
+          className="min-h-20 rounded-xl border border-[#273244] bg-[#0B0F17]/55 px-4 py-3 text-sm outline-none focus:border-[#8B5CF6]"
+          onChange={(event) => setGmDescription(event.target.value)}
+          placeholder="Секреты ГМа"
+          value={gmDescription}
+        />
+        <select
+          className="h-12 rounded-xl border border-[#273244] bg-[#0B0F17] px-3 text-sm"
+          onChange={(event) => setVisibility(event.target.value as Visibility)}
+          value={visibility}
+        >
+          {visibilityOptions.map((option) => (
+            <option key={option} value={option}>
+              {getLabel(visibilityLabels, option)}
+            </option>
+          ))}
+        </select>
+        <Button type="submit">
+          <Plus size={16} />
+          Создать сцену
+        </Button>
+      </form>
+
+      <div className="mb-4 grid gap-3 md:grid-cols-3">
+        <select
+          className="h-11 rounded-xl border border-[#273244] bg-[#0B0F17] px-3 text-sm"
+          onChange={(event) => setMoveUserId(event.target.value)}
+          value={moveUserId}
+        >
+          {playerMembers.map((member) => (
+            <option key={member.user_id} value={member.user_id}>
+              {member.display_name}
+            </option>
+          ))}
+        </select>
+        <select
+          className="h-11 rounded-xl border border-[#273244] bg-[#0B0F17] px-3 text-sm"
+          onChange={(event) => setMoveCharacterId(event.target.value)}
+          value={moveCharacterId}
+        >
+          <option value="">Без персонажа</option>
+          {characters.map((character) => (
+            <option key={character.character_id} value={character.character_id}>
+              {character.name}
+            </option>
+          ))}
+        </select>
+        <Input
+          onChange={(event) => setMoveReason(event.target.value)}
+          placeholder="Комментарий ГМа"
+          value={moveReason}
+        />
+      </div>
+
+      <div className="space-y-3">
+        {scenes.map((scene) => (
+          <div
+            className="rounded-2xl border border-[#273244] bg-[#0B0F17]/45 p-3"
+            key={scene.scene_id}
+          >
+            <div className="flex flex-col justify-between gap-3 md:flex-row">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="font-semibold">{scene.name}</h4>
+                  {scene.scene_id === activeSceneId ? (
+                    <Badge tone="purple">Активна</Badge>
+                  ) : null}
+                  <Badge tone={scene.visibility === "gm_only" ? "danger" : "gold"}>
+                    {getLabel(visibilityLabels, scene.visibility)}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-xs text-[#9CA3AF]">
+                  {scene.location?.name ?? "Локация"} ·{" "}
+                  {scene.public_description ?? "Описание пока пустое."}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={() => void activate(scene.scene_id)}
+                  type="button"
+                  variant="secondary"
+                >
+                  <Shuffle size={14} />
+                  В центр
+                </Button>
+                <UploadSceneImageButton
+                  campaignId={campaignId}
+                  onUploaded={onChanged}
+                  sceneId={scene.scene_id}
+                />
+                <Button
+                  onClick={() => void move(scene.scene_id)}
+                  type="button"
+                  variant="ghost"
+                >
+                  Переместить
+                </Button>
+                <Button
+                  onClick={() => void archive(scene.scene_id)}
+                  type="button"
+                  variant="danger"
+                >
+                  <Archive size={14} />
+                </Button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 export function LocationAccessPanel({
   campaignId,
   location,
@@ -336,14 +697,20 @@ export function LocationManagerModal({
   campaignId,
   dashboard,
   locations,
+  scenes,
+  characters,
   activeLocationId,
+  activeSceneId,
   onClose,
   onChanged
 }: {
   campaignId: string;
   dashboard: Dashboard;
   locations: Location[];
+  scenes: Scene[];
+  characters: Character[];
   activeLocationId?: string | null;
+  activeSceneId?: string | null;
   onClose: () => void;
   onChanged: () => void;
 }) {
@@ -541,6 +908,18 @@ export function LocationManagerModal({
               </Card>
             ))}
           </div>
+        </div>
+
+        <div className="mt-5">
+          <SceneManagerPanel
+            activeSceneId={activeSceneId}
+            campaignId={campaignId}
+            characters={characters}
+            locations={locations}
+            members={dashboard.members}
+            onChanged={onChanged}
+            scenes={scenes}
+          />
         </div>
       </div>
     </div>
@@ -753,6 +1132,7 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
   const [state, setState] = useState<PlayRoomState>({
     dashboard: null,
     locations: [],
+    scenes: [],
     characters: [],
     messages: [],
     gmRequests: [],
@@ -775,13 +1155,30 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
     );
   }, [state.locations]);
 
+  const activeScene = useMemo(() => {
+    return (
+      state.scenes.find((scene) => scene.is_active_scene) ??
+      state.scenes.find((scene) => scene.is_current_for_user) ??
+      state.scenes[0] ??
+      null
+    );
+  }, [state.scenes]);
+
+  const sceneLocation =
+    state.locations.find(
+      (location) =>
+        String(location.location_id) ===
+        String(activeScene?.location_id ?? activeScene?.location?.location_id)
+    ) ?? activeLocation;
+
   async function loadData() {
     setError(null);
-    const [currentUser, dashboard, locations, characters, messages] =
+    const [currentUser, dashboard, locations, scenes, characters, messages] =
       await Promise.all([
         getCurrentUser(),
         getDashboard(campaignId),
         getLocations(campaignId),
+        getScenes(campaignId),
         getCharacters(campaignId),
         getChat(campaignId)
       ]);
@@ -790,6 +1187,7 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
       currentUser.error ??
       dashboard.error ??
       locations.error ??
+      scenes.error ??
       characters.error ??
       messages.error;
 
@@ -803,6 +1201,7 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
       currentUser: currentUser.data,
       dashboard: dashboard.data,
       locations: locations.data ?? [],
+      scenes: scenes.data ?? [],
       characters: characters.data ?? [],
       messages: messages.data ?? [],
       gmRequests: []
@@ -840,7 +1239,11 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
           <Card className="overflow-hidden p-3">
-            <LocationImageCard location={activeLocation} />
+            <SceneImageCard
+              isGm={isGm}
+              location={sceneLocation}
+              scene={activeScene}
+            />
             <div className="mt-4 flex flex-col justify-between gap-3 px-2 pb-2 md:flex-row md:items-center">
               <div>
                 <div className="text-sm text-[#9CA3AF]">
@@ -855,7 +1258,7 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
                 {permissions?.canManageLocations ? (
                   <Button onClick={() => setManagerOpen(true)} type="button">
                     <MapPinned size={16} />
-                    Управление локациями
+                    Управление сценами
                   </Button>
                 ) : permissions?.canCreateTravelRequest ? (
                   <Button onClick={() => setTravelOpen(true)} type="button">
@@ -887,7 +1290,38 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
             </Card>
 
             <Card className="p-4">
-              <h3 className="mb-3 font-semibold">Активные персонажи</h3>
+              <h3 className="mb-3 font-semibold">Сцены этой комнаты</h3>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {state.scenes.slice(0, 6).map((scene) => (
+                  <button
+                    className="rounded-2xl border border-[#273244] bg-[#171A26]/70 p-3 text-left text-sm transition hover:border-[#8B5CF6]/60"
+                    key={scene.scene_id}
+                    onClick={() =>
+                      permissions?.canManageLocations
+                        ? void activateScene(campaignId, scene.scene_id).then(() =>
+                            loadData()
+                          )
+                        : undefined
+                    }
+                    type="button"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold text-[#F5F2EA]">
+                        {scene.name}
+                      </span>
+                      {scene.is_active_scene ? <Badge tone="purple">Центр</Badge> : null}
+                    </div>
+                    <div className="mt-1 text-xs text-[#9CA3AF]">
+                      {scene.location?.name ?? "Локация"}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </Card>
+          </div>
+
+          <Card className="p-4">
+            <h3 className="mb-3 font-semibold">Активные персонажи</h3>
               <div className="grid gap-3 sm:grid-cols-2">
                 {state.characters.slice(0, 4).map((character) => (
                   <div
@@ -904,8 +1338,7 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
                   </div>
                 ))}
               </div>
-            </Card>
-          </div>
+          </Card>
 
           {permissions?.canApproveGMRequests ? (
             <GMRequestsPanel
@@ -947,9 +1380,12 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
       {managerOpen && permissions?.canManageLocations ? (
         <LocationManagerModal
           activeLocationId={activeLocation?.location_id}
+          activeSceneId={activeScene?.scene_id}
           campaignId={campaignId}
+          characters={state.characters}
           dashboard={state.dashboard}
           locations={state.locations}
+          scenes={state.scenes}
           onChanged={() => void loadData()}
           onClose={() => setManagerOpen(false)}
         />

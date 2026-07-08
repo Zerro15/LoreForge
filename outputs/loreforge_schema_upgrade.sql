@@ -68,6 +68,9 @@ ALTER TABLE campaign
     ADD COLUMN IF NOT EXISTS active_location_id BIGINT;
 
 ALTER TABLE campaign
+    ADD COLUMN IF NOT EXISTS active_scene_id BIGINT;
+
+ALTER TABLE campaign
     ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'private';
 
 ALTER TABLE campaign
@@ -104,6 +107,16 @@ BEGIN
     END IF;
 
     IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'campaign_active_scene_fk'
+    ) THEN
+        ALTER TABLE campaign
+            ADD CONSTRAINT campaign_active_scene_fk
+            FOREIGN KEY (active_scene_id)
+            REFERENCES scene(scene_id)
+            ON DELETE SET NULL;
+    END IF;
+
+    IF NOT EXISTS (
         SELECT 1 FROM pg_constraint WHERE conname = 'campaign_visibility_check'
     ) THEN
         ALTER TABLE campaign
@@ -121,6 +134,52 @@ BEGIN
 END $$;
 
 -- 2.1. Location play-room metadata.
+
+ALTER TABLE scene
+    ADD COLUMN IF NOT EXISTS visibility visibility_scope NOT NULL DEFAULT 'party_only';
+
+ALTER TABLE scene
+    ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+
+ALTER TABLE scene
+    ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+
+ALTER TABLE campaign_member
+    ADD COLUMN IF NOT EXISTS current_location_id BIGINT;
+
+ALTER TABLE campaign_member
+    ADD COLUMN IF NOT EXISTS current_scene_id BIGINT;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'scene_status_check'
+    ) THEN
+        ALTER TABLE scene
+            ADD CONSTRAINT scene_status_check
+            CHECK (status IN ('active', 'hidden', 'archived'));
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'campaign_member_current_location_fk'
+    ) THEN
+        ALTER TABLE campaign_member
+            ADD CONSTRAINT campaign_member_current_location_fk
+            FOREIGN KEY (current_location_id)
+            REFERENCES location(location_id)
+            ON DELETE SET NULL;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'campaign_member_current_scene_fk'
+    ) THEN
+        ALTER TABLE campaign_member
+            ADD CONSTRAINT campaign_member_current_scene_fk
+            FOREIGN KEY (current_scene_id)
+            REFERENCES scene(scene_id)
+            ON DELETE SET NULL;
+    END IF;
+END $$;
 
 ALTER TABLE npc
     ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
@@ -775,7 +834,9 @@ CREATE TABLE IF NOT EXISTS audit_log (
 CREATE INDEX IF NOT EXISTS idx_campaign_status ON campaign(status);
 CREATE INDEX IF NOT EXISTS idx_campaign_cover_attachment_id ON campaign(cover_attachment_id);
 CREATE INDEX IF NOT EXISTS idx_campaign_active_location_id ON campaign(active_location_id);
+CREATE INDEX IF NOT EXISTS idx_campaign_active_scene_id ON campaign(active_scene_id);
 CREATE INDEX IF NOT EXISTS idx_campaign_member_campaign_role ON campaign_member(campaign_id, role);
+CREATE INDEX IF NOT EXISTS idx_campaign_member_current_scene ON campaign_member(campaign_id, current_scene_id);
 
 CREATE INDEX IF NOT EXISTS idx_npc_campaign_visibility ON npc(campaign_id, visibility);
 CREATE INDEX IF NOT EXISTS idx_npc_campaign_status ON npc(campaign_id, status);
@@ -783,6 +844,9 @@ CREATE INDEX IF NOT EXISTS idx_location_campaign_visibility ON location(campaign
 CREATE INDEX IF NOT EXISTS idx_location_campaign_status ON location(campaign_id, status);
 CREATE INDEX IF NOT EXISTS idx_location_cover_attachment_id ON location(cover_attachment_id);
 CREATE INDEX IF NOT EXISTS idx_location_event_expires_at ON location(is_event_location, expires_at);
+CREATE INDEX IF NOT EXISTS idx_scene_campaign_location_status ON scene(campaign_id, location_id, status);
+CREATE INDEX IF NOT EXISTS idx_scene_visibility ON scene(campaign_id, visibility);
+CREATE INDEX IF NOT EXISTS idx_scene_player_state_user ON scene_player_state(user_id, familiarity_state);
 CREATE INDEX IF NOT EXISTS idx_item_campaign_visibility ON item(campaign_id, visibility);
 CREATE INDEX IF NOT EXISTS idx_attachment_campaign_visibility ON attachment(campaign_id, visibility);
 CREATE INDEX IF NOT EXISTS idx_attachment_campaign_storage ON attachment(campaign_id, storage_kind);

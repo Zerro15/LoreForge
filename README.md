@@ -46,10 +46,10 @@ LoreForge собирает кампанию в единую систему:
 - Список кампаний и dashboard кампании.
 - Demo-кампания `Туман над Баклундом`.
 - Активный world plugin `Mistbound`.
-- Play Room: активная локация, чат, кубики и запросы переходов.
+- Play Room: активная сцена, локации, чат, кубики и запросы переходов.
 - Карточки персонажей с путём, последовательностью, духовностью, рассудком, усвоением и риском потери контроля.
 - NPC dossier cards с публичным описанием, тегами и `SecretBlock`.
-- Иерархия локаций, загрузка картинки локации и выдача доступа игрокам.
+- Иерархия локаций, сцены внутри локаций, загрузка карт и выдача доступа игрокам.
 - Player travel requests и approve/reject flow для ГМа.
 - Чат кампании.
 - Быстрые броски `d20`, `d100`, `2d6`.
@@ -216,6 +216,11 @@ alice@example.com / password123
 - `GET /api/campaigns/:campaignId/tags`
 - `POST /api/campaigns/:campaignId/tags`
 - `GET /api/campaigns/:campaignId/locations`
+- `GET /api/campaigns/:campaignId/scenes`
+- `POST /api/campaigns/:campaignId/locations/:locationId/scenes`
+- `POST /api/campaigns/:campaignId/scenes/:sceneId/activate`
+- `POST /api/campaigns/:campaignId/scenes/:sceneId/image`
+- `POST /api/campaigns/:campaignId/scenes/:sceneId/move-player`
 - `GET /api/campaigns/:campaignId/chat`
 - `POST /api/campaigns/:campaignId/dice-roll`
 - `GET /api/campaigns/:campaignId/session-log`

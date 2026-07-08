@@ -7,6 +7,7 @@ import type {
   GMRequest,
   Location,
   Npc,
+  Scene,
   SessionLog,
   Tag,
   Visibility,
@@ -251,6 +252,103 @@ export function uploadLocationImage(
     {
       method: "POST",
       body
+    }
+  );
+}
+
+export type SceneInput = {
+  name: string;
+  sceneType?: string | null;
+  publicDescription?: string | null;
+  gmDescription?: string | null;
+  visibility: Visibility;
+  sortOrder?: number;
+};
+
+export function getScenes(campaignId: string, locationId?: string | null) {
+  const query = locationId ? `?locationId=${encodeURIComponent(locationId)}` : "";
+  return requestApi<Scene[]>(`/api/campaigns/${campaignId}/scenes${query}`);
+}
+
+export function createScene(
+  campaignId: string,
+  locationId: string,
+  body: SceneInput
+) {
+  return requestApi<Scene>(
+    `/api/campaigns/${campaignId}/locations/${locationId}/scenes`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(body)
+    }
+  );
+}
+
+export function updateScene(
+  campaignId: string,
+  sceneId: string,
+  body: Partial<SceneInput> & { status?: "active" | "hidden" | "archived" }
+) {
+  return requestApi<Scene>(`/api/campaigns/${campaignId}/scenes/${sceneId}`, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+export function archiveScene(campaignId: string, sceneId: string) {
+  return requestApi<{ ok: true; scene: Scene }>(
+    `/api/campaigns/${campaignId}/scenes/${sceneId}`,
+    {
+      method: "DELETE"
+    }
+  );
+}
+
+export function activateScene(campaignId: string, sceneId: string) {
+  return requestApi<{ ok: true; activeSceneId: string; activeLocationId: string }>(
+    `/api/campaigns/${campaignId}/scenes/${sceneId}/activate`,
+    {
+      method: "POST"
+    }
+  );
+}
+
+export function uploadSceneImage(
+  campaignId: string,
+  sceneId: string,
+  file: File
+) {
+  const body = new FormData();
+  body.append("file", file);
+
+  return requestApi<{ sceneImage: unknown; attachment: unknown }>(
+    `/api/campaigns/${campaignId}/scenes/${sceneId}/image`,
+    {
+      method: "POST",
+      body
+    }
+  );
+}
+
+export function movePlayerToScene(
+  campaignId: string,
+  sceneId: string,
+  body: { userId: number; characterId?: number | null; reason?: string | null }
+) {
+  return requestApi<{ ok: true; scene: Scene }>(
+    `/api/campaigns/${campaignId}/scenes/${sceneId}/move-player`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(body)
     }
   );
 }

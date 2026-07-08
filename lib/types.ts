@@ -175,6 +175,38 @@ export type Location = LocationPreview & {
   } | null;
 };
 
+export type Scene = {
+  scene_id: string;
+  campaign_id: string;
+  location_id: string;
+  name: string;
+  scene_type: string | null;
+  public_description: string | null;
+  gm_description: string | null;
+  sort_order: number;
+  is_active: boolean;
+  visibility: Visibility;
+  status: "active" | "hidden" | "archived";
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
+  is_active_scene?: boolean;
+  is_current_for_user?: boolean;
+  has_player_access?: boolean;
+  location?: {
+    location_id: string;
+    name: string;
+    visibility: Visibility;
+    status: string;
+  };
+  image?: {
+    scene_image_id: string;
+    name: string;
+    visibility: Visibility;
+    attachment: Attachment;
+  } | null;
+};
+
 export type Attachment = {
   attachment_id: string;
   filename: string;
