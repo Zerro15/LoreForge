@@ -34,9 +34,13 @@ import {
   getLocations,
   getScenes,
   getSceneTokens,
+  getSceneVisibility,
   grantLocationAccess,
+  hideSceneArea,
   movePlayerToScene,
   rejectGmRequest,
+  revealAllScene,
+  revealSceneArea,
   revokeLocationAccess,
   sendChatMessage,
   updateLocation,
@@ -55,7 +59,9 @@ import type {
   Location,
   Scene,
   SceneToken,
+  SceneVisibilityState,
   TokenVisibility,
+  VisionArea,
   Visibility
 } from "@/lib/types";
 import {
@@ -77,6 +83,7 @@ type PlayRoomState = {
   locations: Location[];
   scenes: Scene[];
   tokens: SceneToken[];
+  vision: SceneVisibilityState | null;
   characters: Character[];
   messages: ChatMessageType[];
   gmRequests: GMRequest[];
@@ -204,15 +211,21 @@ export function SceneImageCard({
   location,
   isGm,
   tokens,
+  vision,
+  members,
   campaignId,
-  onTokensChanged
+  onTokensChanged,
+  onVisionChanged
 }: {
   scene: Scene | null;
   location: Location | null;
   isGm: boolean;
   tokens: SceneToken[];
+  vision: SceneVisibilityState | null;
+  members: Dashboard["members"];
   campaignId: string;
   onTokensChanged: () => void;
+  onVisionChanged: () => void;
 }) {
   const imageUrl = resolveAssetUrl(scene?.image?.attachment?.public_url);
 
@@ -231,6 +244,8 @@ export function SceneImageCard({
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:64px_64px]" />
       <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F17] via-[#0B0F17]/28 to-[#0B0F17]/10" />
 
+      <VisionLayer isGm={isGm} vision={vision} />
+
       {isGm ? (
         <div className="absolute right-4 top-4 z-20 rounded-2xl border border-[#273244] bg-[#0B0F17]/80 p-3 text-xs text-[#c7ccd6] shadow-xl backdrop-blur">
           <div className="mb-2 font-semibold text-[#F5F2EA]">NPC-инструменты</div>
@@ -248,6 +263,15 @@ export function SceneImageCard({
         scene={scene}
         tokens={tokens}
       />
+
+      {isGm ? (
+        <VisionManager
+          campaignId={campaignId}
+          members={members}
+          onChanged={onVisionChanged}
+          scene={scene}
+        />
+      ) : null}
 
       <div className="relative z-20 flex min-h-[620px] flex-col justify-end p-7">
         <div className="flex flex-wrap gap-2">
@@ -278,6 +302,204 @@ export function SceneImageCard({
             {scene.gm_description}
           </div>
         ) : null}
+      </div>
+    </div>
+  );
+}
+
+function getRectArea(area: VisionArea) {
+  if (area.type === "rect" || area.x !== undefined) {
+    return {
+      x: area.x ?? 0,
+      y: area.y ?? 0,
+      width: area.width ?? 30,
+      height: area.height ?? 30
+    };
+  }
+
+  const points = area.points ?? [];
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+
+  if (!xs.length || !ys.length) {
+    return null;
+  }
+
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const maxX = Math.max(...xs);
+  const maxY = Math.max(...ys);
+
+  return {
+    x: minX,
+    y: minY,
+    width: Math.max(4, maxX - minX),
+    height: Math.max(4, maxY - minY)
+  };
+}
+
+export function VisionLayer({
+  isGm,
+  vision
+}: {
+  isGm: boolean;
+  vision: SceneVisibilityState | null;
+}) {
+  const revealedAreas = vision?.revealed_data?.areas ?? [];
+  const hiddenAreas = vision?.revealed_data?.hiddenAreas ?? [];
+  const isFullMap = isGm || vision?.revealed_data?.mode === "all";
+
+  if (!vision) {
+    return null;
+  }
+
+  if (isFullMap) {
+    return (
+      <div className="pointer-events-none absolute inset-0 z-[6]">
+        {isGm ? (
+          <div className="absolute left-4 bottom-4 rounded-full border border-[#4FAF7A]/35 bg-[#0B0F17]/70 px-3 py-1 text-xs text-[#b6f4d0] backdrop-blur">
+            Полный обзор ГМа
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-[6] overflow-hidden">
+      <div className="absolute inset-0 bg-[#02040A]/72 backdrop-blur-[1px]" />
+      {revealedAreas.map((area, index) => {
+        const rect = getRectArea(area);
+
+        if (!rect) {
+          return null;
+        }
+
+        return (
+          <div
+            className="absolute rounded-2xl border border-[#A78BFA]/45 bg-[#F5F2EA]/10 shadow-[0_0_70px_rgba(167,139,250,0.35)]"
+            key={`revealed-${index}`}
+            style={{
+              height: `${rect.height}%`,
+              left: `${rect.x}%`,
+              top: `${rect.y}%`,
+              width: `${rect.width}%`
+            }}
+          />
+        );
+      })}
+      {hiddenAreas.map((area, index) => {
+        const rect = getRectArea(area);
+
+        if (!rect) {
+          return null;
+        }
+
+        return (
+          <div
+            className="absolute rounded-2xl border border-[#B84A4A]/35 bg-[#02040A]/80"
+            key={`hidden-${index}`}
+            style={{
+              height: `${rect.height}%`,
+              left: `${rect.x}%`,
+              top: `${rect.y}%`,
+              width: `${rect.width}%`
+            }}
+          />
+        );
+      })}
+      {!revealedAreas.length ? (
+        <div className="absolute inset-0 flex items-center justify-center text-sm text-[#9CA3AF]">
+          Карта пока скрыта туманом войны
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function VisionManager({
+  campaignId,
+  scene,
+  members,
+  onChanged
+}: {
+  campaignId: string;
+  scene: Scene | null;
+  members: Dashboard["members"];
+  onChanged: () => void;
+}) {
+  const playerMembers = members.filter((member) => member.role === "player");
+  const [targetUserId, setTargetUserId] = useState(playerMembers[0]?.user_id ?? "");
+  const [error, setError] = useState<string | null>(null);
+
+  const defaultArea: VisionArea = {
+    type: "rect",
+    x: 18,
+    y: 18,
+    width: 34,
+    height: 34
+  };
+
+  async function run(action: "reveal" | "revealAll" | "hide") {
+    if (!scene || !targetUserId) {
+      return;
+    }
+
+    const userId = Number(targetUserId);
+    const result =
+      action === "reveal"
+        ? await revealSceneArea(campaignId, scene.scene_id, {
+            userId,
+            area: defaultArea
+          })
+        : action === "revealAll"
+          ? await revealAllScene(campaignId, scene.scene_id, { userId })
+          : await hideSceneArea(campaignId, scene.scene_id, {
+              userId,
+              area: { type: "rect", x: 46, y: 46, width: 28, height: 28 }
+            });
+
+    setError(result.error);
+    if (!result.error) {
+      onChanged();
+    }
+  }
+
+  if (!scene || !playerMembers.length) {
+    return null;
+  }
+
+  return (
+    <div className="absolute left-4 top-[15.25rem] z-20 w-64 rounded-2xl border border-[#273244] bg-[#0B0F17]/82 p-3 shadow-xl backdrop-blur">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="text-sm font-semibold">Туман войны</div>
+        <EyeOff size={15} className="text-[#A78BFA]" />
+      </div>
+      <div className="grid gap-2">
+        <select
+          className="h-10 rounded-xl border border-[#273244] bg-[#0B0F17] px-3 text-sm"
+          onChange={(event) => setTargetUserId(event.target.value)}
+          value={targetUserId}
+        >
+          {playerMembers.map((member) => (
+            <option key={member.user_id} value={member.user_id}>
+              {member.display_name}
+            </option>
+          ))}
+        </select>
+        <Button onClick={() => void run("reveal")} type="button" variant="secondary">
+          <Eye size={14} />
+          Открыть область
+        </Button>
+        <Button onClick={() => void run("revealAll")} type="button">
+          <Eye size={14} />
+          Открыть всю карту
+        </Button>
+        <Button onClick={() => void run("hide")} type="button" variant="secondary">
+          <EyeOff size={14} />
+          Скрыть область
+        </Button>
+        {error ? <p className="text-xs text-[#e89a9a]">{error}</p> : null}
       </div>
     </div>
   );
@@ -1361,6 +1583,7 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
     locations: [],
     scenes: [],
     tokens: [],
+    vision: null,
     characters: [],
     messages: [],
     gmRequests: [],
@@ -1432,6 +1655,7 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
       locations: locations.data ?? [],
       scenes: scenes.data ?? [],
       tokens: [],
+      vision: null,
       characters: characters.data ?? [],
       messages: messages.data ?? [],
       gmRequests: []
@@ -1444,13 +1668,18 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
       null;
 
     if (nextActiveScene) {
-      const tokens = await getSceneTokens(campaignId, nextActiveScene.scene_id);
-      if (tokens.error) {
-        setError(tokens.error);
+      const [tokens, vision] = await Promise.all([
+        getSceneTokens(campaignId, nextActiveScene.scene_id),
+        getSceneVisibility(campaignId, nextActiveScene.scene_id)
+      ]);
+      const sceneError = tokens.error ?? vision.error;
+      if (sceneError) {
+        setError(sceneError);
         setLoading(false);
         return;
       }
       nextState.tokens = tokens.data ?? [];
+      nextState.vision = vision.data;
     }
 
     if (dashboard.data?.currentMember.canApproveGMRequests) {
@@ -1550,9 +1779,12 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
               campaignId={campaignId}
               isGm={isGm}
               location={sceneLocation}
+              members={dashboard.members}
               onTokensChanged={() => void loadData()}
+              onVisionChanged={() => void loadData()}
               scene={activeScene}
               tokens={state.tokens}
+              vision={state.vision}
             />
             <div className="mt-4 flex flex-col justify-between gap-3 px-2 pb-2 md:flex-row md:items-center">
               <div>
