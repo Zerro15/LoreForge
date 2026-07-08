@@ -234,10 +234,24 @@ alice@example.com / password123
 - [docs/roadmap.md](docs/roadmap.md) — roadmap.
 - [docs/frontend.md](docs/frontend.md) — frontend.
 - [docs/backend-api.md](docs/backend-api.md) — backend API.
+- [docs/deployment-split.md](docs/deployment-split.md) — план будущего split frontend/backend.
 - [docs/access-control.md](docs/access-control.md) — роли и права доступа.
 - [docs/manual-role-test.md](docs/manual-role-test.md) — ручная проверка ролей.
 - [docs/database-workflow.md](docs/database-workflow.md) — workflow БД.
 - [docs/dev-environment.md](docs/dev-environment.md) — локальное окружение.
+
+## Будущий split frontend/backend
+
+Текущий репозиторий пока остаётся monorepo и продолжает быть основным местом разработки.
+
+Отдельные репозитории уже зарезервированы:
+
+- [LoreForge-Frontend](https://github.com/Zerro15/LoreForge-Frontend);
+- [LoreForge-Backend](https://github.com/Zerro15/LoreForge-Backend).
+
+Код туда не переносится без отдельного решения. Frontend и backend уже связаны через env-конфиг: `NEXT_PUBLIC_API_URL` на frontend и `FRONTEND_URL` / `CORS_ORIGIN` на backend.
+
+Подробнее: [docs/deployment-split.md](docs/deployment-split.md).
 
 ## Статус проекта
 
