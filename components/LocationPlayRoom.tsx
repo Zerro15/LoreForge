@@ -14,7 +14,7 @@ import {
   Shuffle,
   X
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   activateLocation,
   activateScene,
@@ -38,6 +38,7 @@ import {
   movePlayerToScene,
   rejectGmRequest,
   revokeLocationAccess,
+  sendChatMessage,
   updateLocation,
   updateSceneToken,
   uploadSceneImage,
@@ -67,7 +68,9 @@ import {
 } from "@/lib/ui-labels";
 import { ChatMessage } from "./ChatMessage";
 import { DiceQuickRolls } from "./DiceQuickRolls";
+import { RealtimeProvider } from "./RealtimeProvider";
 import { Badge, Button, Card, EmptyState, ErrorState, Input } from "./ui";
+import type { RealtimeEvent } from "@/lib/realtime";
 
 type PlayRoomState = {
   dashboard: Dashboard | null;
@@ -1367,6 +1370,7 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [managerOpen, setManagerOpen] = useState(false);
   const [travelOpen, setTravelOpen] = useState(false);
+  const [chatInput, setChatInput] = useState("");
 
   const permissions = state.dashboard?.currentMember ?? null;
   const role = permissions?.role ?? getCurrentRole(state);
@@ -1463,6 +1467,45 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaignId]);
 
+  const handleRealtimeEvent = useCallback(
+    (event: RealtimeEvent) => {
+      if (
+        event.type === "scene.changed" ||
+        event.type === "player.moved" ||
+        event.type === "token.created" ||
+        event.type === "token.updated" ||
+        event.type === "token.deleted" ||
+        event.type === "chat.message.created" ||
+        event.type === "dice.rolled"
+      ) {
+        void loadData();
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [campaignId]
+  );
+
+  async function submitChatMessage(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!chatInput.trim()) {
+      return;
+    }
+
+    const result = await sendChatMessage(campaignId, {
+      content: chatInput,
+      visibility: "party_only"
+    });
+
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+
+    setChatInput("");
+    await loadData();
+  }
+
   if (loading) {
     return (
       <Card className="p-8 text-center">
@@ -1476,8 +1519,30 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
     return <ErrorState message={error ?? "Кампания не найдена"} />;
   }
 
+  const dashboard = state.dashboard;
+
   return (
+    <RealtimeProvider campaignId={campaignId} onEvent={handleRealtimeEvent}>
+      {(realtimeStatus) => (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <Badge
+          tone={
+            realtimeStatus === "connected"
+              ? "green"
+              : realtimeStatus === "connecting"
+                ? "gold"
+                : "danger"
+          }
+        >
+          <span className="h-2 w-2 rounded-full bg-current" />
+          {realtimeStatus === "connected"
+            ? "Подключено"
+            : realtimeStatus === "connecting"
+              ? "Подключение..."
+              : "Нет соединения"}
+        </Badge>
+      </div>
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
           <Card className="overflow-hidden p-3">
@@ -1492,11 +1557,11 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
             <div className="mt-4 flex flex-col justify-between gap-3 px-2 pb-2 md:flex-row md:items-center">
               <div>
                 <div className="text-sm text-[#9CA3AF]">
-                  Мир: {state.dashboard.campaign.setting_name ?? "Core"} · Роль:{" "}
+                  Мир: {dashboard.campaign.setting_name ?? "Core"} · Роль:{" "}
                   {getLabel(roleLabels, role, "Наблюдатель")}
                 </div>
                 <h2 className="mt-1 text-xl font-semibold">
-                  {state.dashboard.campaign.title}
+                  {dashboard.campaign.title}
                 </h2>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -1602,6 +1667,21 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
                 <ChatMessage key={message.message_id} message={message} />
               ))}
             </div>
+            {role !== "viewer" ? (
+              <form
+                className="mt-3 flex gap-2"
+                onSubmit={(event) => void submitChatMessage(event)}
+              >
+                <Input
+                  onChange={(event) => setChatInput(event.target.value)}
+                  placeholder="Написать сообщение..."
+                  value={chatInput}
+                />
+                <Button type="submit">
+                  <Send size={15} />
+                </Button>
+              </form>
+            ) : null}
           </Card>
           <DiceQuickRolls
             campaignId={campaignId}
@@ -1628,7 +1708,7 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
           activeSceneId={activeScene?.scene_id}
           campaignId={campaignId}
           characters={state.characters}
-          dashboard={state.dashboard}
+          dashboard={dashboard}
           locations={state.locations}
           scenes={state.scenes}
           onChanged={() => void loadData()}
@@ -1647,5 +1727,7 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
         />
       ) : null}
     </div>
+      )}
+    </RealtimeProvider>
   );
 }
