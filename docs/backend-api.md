@@ -186,11 +186,84 @@ curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/dashboard
 - resources;
 - abilities.
 
-`secret_description` и `notes` возвращаются только для `owner/gm/co_gm`.
+Правила доступа:
+
+- `owner/gm/co_gm` видят всех активных персонажей, `gm_notes`, `private_notes`;
+- `player` видит `public/party_only` персонажей, не видит `gm_notes`, видит `private_notes` только у своих персонажей;
+- `viewer` видит только `public/party_only` персонажей без `gm_notes` и `private_notes`.
 
 ```powershell
 curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/characters
 ```
+
+### GET `/api/campaigns/:campaignId/characters/:characterId`
+
+Возвращает одного персонажа с теми же правилами visibility и скрытия заметок.
+
+```powershell
+curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/characters/1
+```
+
+### POST `/api/campaigns/:campaignId/characters`
+
+Создаёт персонажа.
+
+- `owner/gm/co_gm` могут создать персонажа для любого участника кампании или без владельца;
+- `player` может создать только своего персонажа;
+- `viewer` получает `403`.
+
+Body:
+
+```json
+{
+  "name": "Новый герой",
+  "title": "Провидец",
+  "publicDescription": "Публичное описание персонажа.",
+  "privateNotes": "Личные заметки игрока.",
+  "gmNotes": "Секретная заметка ГМа.",
+  "statusText": "готов к сцене",
+  "visibility": "party_only",
+  "ownerUserId": 4
+}
+```
+
+```powershell
+curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/characters `
+  -H "Content-Type: application/json" `
+  -d '{"name":"Новый герой","publicDescription":"Публичная карточка.","visibility":"party_only"}'
+```
+
+### PATCH `/api/campaigns/:campaignId/characters/:characterId`
+
+Редактирует персонажа.
+
+- `owner/gm/co_gm` могут редактировать любого;
+- `player` может редактировать только своего и не может менять `gmNotes`, `ownerUserId`, `visibility`, `status`;
+- `viewer` получает `403`.
+
+```powershell
+curl -b work\cookies.txt -X PATCH http://localhost:3001/api/campaigns/1/characters/1 `
+  -H "Content-Type: application/json" `
+  -d '{"statusText":"насторожен","privateNotes":"проверить письмо"}'
+```
+
+### DELETE `/api/campaigns/:campaignId/characters/:characterId`
+
+Soft archive персонажа. Физического удаления нет.
+
+- `owner/gm/co_gm` могут архивировать любого;
+- `player` может архивировать только своего;
+- `viewer` получает `403`.
+
+```powershell
+curl -b work\cookies.txt -X DELETE http://localhost:3001/api/campaigns/1/characters/1
+```
+
+CRUD персонажей пишет audit log:
+
+- `character.create`;
+- `character.update`;
+- `character.archive`.
 
 ### GET `/api/campaigns/:campaignId/npcs`
 

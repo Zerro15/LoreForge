@@ -1,6 +1,7 @@
 import { Activity, Brain, Eye, ShieldAlert, Sparkles, UserRound } from "lucide-react";
 import type { Character, CharacterPreview } from "@/lib/types";
-import { Badge, Card, Meter, SecretBlock } from "./ui";
+import { Badge, Card, Button, Meter, SecretBlock } from "./ui";
+import { visibilityLabels } from "@/lib/ui-labels";
 
 function findValue(
   items: Array<{ name: string; value?: number; current_value?: number }>,
@@ -24,9 +25,15 @@ function inferPath(character: Character | CharacterPreview) {
 }
 
 export function CharacterCard({
-  character
+  character,
+  canManage,
+  onArchive,
+  onEdit
 }: {
   character: Character | CharacterPreview;
+  canManage?: boolean;
+  onArchive?: (character: Character) => void;
+  onEdit?: (character: Character) => void;
 }) {
   const full = character as Character;
   const sequence =
@@ -51,14 +58,21 @@ export function CharacterCard({
           <h3 className="text-lg font-semibold">{character.name}</h3>
           <p className="mt-1 text-sm text-[#9CA3AF]">
             {"owner" in character
-              ? character.owner.display_name
+              ? character.owner?.display_name ?? "Без владельца"
               : character.owner_display_name}
           </p>
         </div>
-        <Badge tone="blue">
-          <UserRound size={13} />
-          PC
-        </Badge>
+        <div className="flex flex-col items-end gap-2">
+          <Badge tone="blue">
+            <UserRound size={13} />
+            PC
+          </Badge>
+          {"visibility" in full ? (
+            <Badge tone="muted">
+              {visibilityLabels[full.visibility] ?? "Неизвестно"}
+            </Badge>
+          ) : null}
+        </div>
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-2">
@@ -110,6 +124,18 @@ export function CharacterCard({
         </div>
       ) : null}
 
+      {"private_notes" in full && full.private_notes ? (
+        <div className="mt-5">
+          <SecretBlock title="Личные заметки">{full.private_notes}</SecretBlock>
+        </div>
+      ) : null}
+
+      {"gm_notes" in full && full.gm_notes ? (
+        <div className="mt-5">
+          <SecretBlock>{full.gm_notes}</SecretBlock>
+        </div>
+      ) : null}
+
       {"secret_description" in full && full.secret_description ? (
         <div className="mt-5">
           <SecretBlock>{full.secret_description}</SecretBlock>
@@ -120,6 +146,17 @@ export function CharacterCard({
         <div className="mt-4 flex items-start gap-2 text-xs text-[#9CA3AF]">
           <Activity size={14} className="mt-0.5 text-[#D6A84F]" />
           {full.notes}
+        </div>
+      ) : null}
+
+      {canManage && "owner" in full ? (
+        <div className="mt-5 flex flex-wrap gap-2 border-t border-[#273244]/70 pt-4">
+          <Button onClick={() => onEdit?.(full)} type="button" variant="secondary">
+            Редактировать
+          </Button>
+          <Button onClick={() => onArchive?.(full)} type="button" variant="danger">
+            Архивировать
+          </Button>
         </div>
       ) : null}
     </Card>

@@ -43,8 +43,11 @@ http://localhost:3000/login
 8. На странице NPC нажать **Добавить NPC**, заполнить имя, visibility и тег, сохранить.
 9. Проверить, что новый NPC появился в списке и его можно отредактировать.
 10. Нажать **Архивировать** и убедиться, что NPC исчез из списка без физического удаления.
-11. Открыть `/campaigns/1/session-log` и убедиться, что приватные заметки видны.
-12. Повторить коротко для `gm@loreforge.local` и `cogm@loreforge.local`.
+11. Открыть `/campaigns/1/characters`.
+12. Создать персонажа, добавить личные заметки и GM заметки.
+13. Проверить, что персонаж редактируется и архивируется.
+14. Открыть `/campaigns/1/session-log` и убедиться, что приватные заметки видны.
+15. Повторить коротко для `gm@loreforge.local` и `cogm@loreforge.local`.
 
 ## Проверка player
 
@@ -55,8 +58,13 @@ http://localhost:3000/login
 5. Проверить, что видны только доступные/public/party локации.
 6. Открыть `/campaigns/1/npcs` и убедиться, что `SecretBlock` не отображается.
 7. Проверить, что кнопки **Добавить NPC**, **Редактировать** и **Архивировать** не отображаются.
-8. Открыть `/campaigns/1/chat` и сделать быстрый бросок `1d20`.
-9. Проверить, что бросок появляется в чате.
+8. Открыть `/campaigns/1/characters`.
+9. Создать своего персонажа.
+10. Проверить, что своего персонажа можно редактировать.
+11. Проверить, что чужого персонажа нельзя редактировать.
+12. Проверить, что GM заметки не видны.
+13. Открыть `/campaigns/1/chat` и сделать быстрый бросок `1d20`.
+14. Проверить, что бросок появляется в чате.
 
 ## Проверка viewer
 
@@ -64,9 +72,9 @@ http://localhost:3000/login
 2. Открыть `/campaigns/1`.
 3. Проверить, что нет **Управление локациями** и **Запросить переход**.
 4. Проверить, что быстрые броски отключены с подписью `Режим просмотра: броски недоступны`.
-5. Открыть `/campaigns/1/npcs` и `/campaigns/1/session-log`.
+5. Открыть `/campaigns/1/npcs`, `/campaigns/1/characters` и `/campaigns/1/session-log`.
 6. Проверить, что секреты ГМа и приватные summaries не отображаются.
-7. Проверить, что управление NPC недоступно.
+7. Проверить, что управление NPC и персонажами недоступно.
 8. Попробовать создать NPC через API:
 
 ```powershell
@@ -132,6 +140,50 @@ curl -b work\owner-cookies.txt http://localhost:3001/api/campaigns/1/dashboard
   }
 }
 ```
+
+## Проверка Character CRUD через curl
+
+Войти owner:
+
+```powershell
+curl -i -c work\owner-cookies.txt -X POST http://localhost:3001/api/auth/login `
+  -H "Content-Type: application/json" `
+  -d '{"email":"admin@loreforge.local","password":"password123"}'
+```
+
+Создать персонажа:
+
+```powershell
+curl -b work\owner-cookies.txt -X POST http://localhost:3001/api/campaigns/1/characters `
+  -H "Content-Type: application/json" `
+  -d '{"name":"Тестовый персонаж","title":"Провидец","publicDescription":"Публичная карточка.","privateNotes":"Личные заметки.","gmNotes":"Секрет ГМа.","visibility":"party_only","ownerUserId":4}'
+```
+
+Отредактировать:
+
+```powershell
+curl -b work\owner-cookies.txt -X PATCH http://localhost:3001/api/campaigns/1/characters/1 `
+  -H "Content-Type: application/json" `
+  -d '{"statusText":"проверен"}'
+```
+
+Архивировать:
+
+```powershell
+curl -b work\owner-cookies.txt -X DELETE http://localhost:3001/api/campaigns/1/characters/1
+```
+
+Для `player`:
+
+- `POST /characters` создаёт собственного персонажа;
+- `PATCH` своего персонажа разрешён;
+- `PATCH` чужого персонажа возвращает `403`;
+- `gmNotes`, `ownerUserId`, `visibility`, `status` менять нельзя.
+
+Для `viewer`:
+
+- `POST`, `PATCH`, `DELETE` возвращают `403`;
+- `gm_notes` и `private_notes` в ответах должны быть `null`.
 
 ## Проверка NPC CRUD через curl
 

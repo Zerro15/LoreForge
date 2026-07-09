@@ -88,6 +88,60 @@ export function getCharacters(campaignId: string) {
   return requestApi<Character[]>(`/api/campaigns/${campaignId}/characters`);
 }
 
+export type CharacterInput = {
+  name: string;
+  title?: string | null;
+  publicDescription?: string | null;
+  privateNotes?: string | null;
+  gmNotes?: string | null;
+  statusText?: string | null;
+  visibility: Visibility;
+  status?: "active" | "archived";
+  ownerUserId?: number | null;
+};
+
+export function getCharacter(campaignId: string, characterId: string) {
+  return requestApi<Character>(
+    `/api/campaigns/${campaignId}/characters/${characterId}`
+  );
+}
+
+export function createCharacter(campaignId: string, body: CharacterInput) {
+  return requestApi<Character>(`/api/campaigns/${campaignId}/characters`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+export function updateCharacter(
+  campaignId: string,
+  characterId: string,
+  body: Partial<CharacterInput>
+) {
+  return requestApi<Character>(
+    `/api/campaigns/${campaignId}/characters/${characterId}`,
+    {
+      method: "PATCH",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(body)
+    }
+  );
+}
+
+export function archiveCharacter(campaignId: string, characterId: string) {
+  return requestApi<{ ok: true; character: Character }>(
+    `/api/campaigns/${campaignId}/characters/${characterId}`,
+    {
+      method: "DELETE"
+    }
+  );
+}
+
 export function getNpcs(campaignId: string) {
   return requestApi<Npc[]>(`/api/campaigns/${campaignId}/npcs`);
 }

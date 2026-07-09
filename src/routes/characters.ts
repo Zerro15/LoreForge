@@ -1,96 +1,122 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { getCampaignAccess } from "../access/campaignAccess";
-import { query } from "../db";
+import { CharacterService } from "../services/CharacterService";
 
 const campaignParamsSchema = z.object({
   campaignId: z.coerce.number().int().positive()
 });
 
+const characterParamsSchema = campaignParamsSchema.extend({
+  characterId: z.coerce.number().int().positive()
+});
+
+const visibilitySchema = z.enum([
+  "public",
+  "party_only",
+  "player_only",
+  "gm_only",
+  "hidden_until_discovered"
+]);
+
+const statusSchema = z.enum(["active", "archived"]);
+
+const characterBaseSchema = z.object({
+  name: z.string().trim().min(2),
+  title: z.string().trim().optional().nullable(),
+  publicDescription: z.string().trim().optional().nullable(),
+  privateNotes: z.string().trim().optional().nullable(),
+  gmNotes: z.string().trim().optional().nullable(),
+  statusText: z.string().trim().optional().nullable(),
+  visibility: visibilitySchema,
+  status: statusSchema.optional(),
+  ownerUserId: z.coerce.number().int().positive().optional().nullable()
+});
+
+const characterBodySchema = characterBaseSchema.extend({
+  visibility: visibilitySchema.default("party_only")
+});
+
+const characterPatchSchema = characterBaseSchema.partial();
+
 export async function charactersRoutes(app: FastifyInstance) {
   app.get("/api/campaigns/:campaignId/characters", async (request) => {
     const { campaignId } = campaignParamsSchema.parse(request.params);
-    const access = await getCampaignAccess(request, campaignId);
-
-    if (!access) {
-      const error = new Error("Campaign membership required");
-      error.name = "Forbidden";
-      throw error;
-    }
-
-    return query(
-      `
-      SELECT
-        ch.character_id,
-        ch.name,
-        ch.public_description,
-        CASE WHEN $2::BOOLEAN THEN ch.secret_description ELSE NULL END AS secret_description,
-        CASE WHEN $2::BOOLEAN THEN ch.notes ELSE NULL END AS notes,
-        ch.status_text,
-        ch.current_location_id,
-        ch.current_scene_id,
-        ch.created_at,
-        ch.updated_at,
-        JSONB_BUILD_OBJECT(
-          'user_id', u.user_id,
-          'username', u.username,
-          'display_name', u.display_name
-        ) AS owner,
-        COALESCE(stats.stats, '[]'::JSONB) AS stats,
-        COALESCE(resources.resources, '[]'::JSONB) AS resources,
-        COALESCE(abilities.abilities, '[]'::JSONB) AS abilities
-      FROM "character" ch
-      JOIN app_user u ON u.user_id = ch.owner_user_id
-      LEFT JOIN LATERAL (
-        SELECT JSONB_AGG(
-          JSONB_BUILD_OBJECT(
-            'character_stat_id', cs.character_stat_id,
-            'name', cs.name,
-            'value', cs.value,
-            'source_plugin_feature_id', cs.source_plugin_feature_id
-          )
-          ORDER BY cs.name
-        ) AS stats
-        FROM character_stat cs
-        WHERE cs.character_id = ch.character_id
-      ) stats ON TRUE
-      LEFT JOIN LATERAL (
-        SELECT JSONB_AGG(
-          JSONB_BUILD_OBJECT(
-            'character_resource_id', cr.character_resource_id,
-            'name', cr.name,
-            'current_value', cr.current_value,
-            'max_value', cr.max_value,
-            'source_plugin_feature_id', cr.source_plugin_feature_id
-          )
-          ORDER BY cr.name
-        ) AS resources
-        FROM character_resource cr
-        WHERE cr.character_id = ch.character_id
-      ) resources ON TRUE
-      LEFT JOIN LATERAL (
-        SELECT JSONB_AGG(
-          JSONB_BUILD_OBJECT(
-            'character_ability_id', ca.character_ability_id,
-            'ability_id', a.ability_id,
-            'name', a.name,
-            'description', a.description,
-            'ability_type', a.ability_type,
-            'is_unlocked', ca.is_unlocked,
-            'uses_left', ca.uses_left,
-            'cooldown', ca.cooldown,
-            'metadata_json', ca.metadata_json
-          )
-          ORDER BY a.name
-        ) AS abilities
-        FROM character_ability ca
-        JOIN ability a ON a.ability_id = ca.ability_id
-        WHERE ca.character_id = ch.character_id
-      ) abilities ON TRUE
-      WHERE ch.campaign_id = $1
-      ORDER BY ch.name
-      `,
-      [campaignId, access.permissions.canViewGMSecrets]
-    );
+    return CharacterService.listForRequest(request, campaignId);
   });
+
+  app.get(
+    "/api/campaigns/:campaignId/characters/:characterId",
+    async (request, reply) => {
+      const { campaignId, characterId } = characterParamsSchema.parse(
+        request.params
+      );
+      const character = await CharacterService.getForRequest(
+        request,
+        campaignId,
+        characterId
+      );
+
+      if (!character) {
+        return reply
+          .code(404)
+          .send({ error: "Character not found or unavailable" });
+      }
+
+      return character;
+    }
+  );
+
+  app.post("/api/campaigns/:campaignId/characters", async (request, reply) => {
+    const { campaignId } = campaignParamsSchema.parse(request.params);
+    const body = characterBodySchema.parse(request.body);
+    const character = await CharacterService.createForRequest(
+      request,
+      campaignId,
+      body
+    );
+
+    return reply.code(201).send(character);
+  });
+
+  app.patch(
+    "/api/campaigns/:campaignId/characters/:characterId",
+    async (request, reply) => {
+      const { campaignId, characterId } = characterParamsSchema.parse(
+        request.params
+      );
+      const body = characterPatchSchema.parse(request.body);
+      const character = await CharacterService.updateForRequest(
+        request,
+        campaignId,
+        characterId,
+        body
+      );
+
+      if (!character) {
+        return reply.code(404).send({ error: "Character not found" });
+      }
+
+      return character;
+    }
+  );
+
+  app.delete(
+    "/api/campaigns/:campaignId/characters/:characterId",
+    async (request, reply) => {
+      const { campaignId, characterId } = characterParamsSchema.parse(
+        request.params
+      );
+      const archived = await CharacterService.archiveForRequest(
+        request,
+        campaignId,
+        characterId
+      );
+
+      if (!archived) {
+        return reply.code(404).send({ error: "Character not found" });
+      }
+
+      return { ok: true, character: archived };
+    }
+  );
 }
