@@ -149,13 +149,17 @@ export function useCampaignRealtime(
       }
     }
 
-    function closeSocket(code = 1000, reason = "Client cleanup") {
+    function safeCloseSocket(
+      target: WebSocket | null,
+      code = 1000,
+      reason = "Client cleanup"
+    ) {
       if (
-        socket &&
-        socket.readyState !== WebSocket.CLOSED &&
-        socket.readyState !== WebSocket.CLOSING
+        target &&
+        target.readyState !== WebSocket.CLOSED &&
+        target.readyState !== WebSocket.CLOSING
       ) {
-        socket.close(code, reason);
+        target.close(code, reason);
       }
     }
 
@@ -190,7 +194,7 @@ export function useCampaignRealtime(
 
         if (Date.now() - lastSeenAt > HEARTBEAT_TIMEOUT_MS) {
           console.warn("[realtime] heartbeat timeout, reconnecting");
-          socket.close(4002, "Client heartbeat timeout");
+          safeCloseSocket(socket, 4002, "Client heartbeat timeout");
         }
       }, HEARTBEAT_CHECK_MS);
     }
@@ -266,9 +270,12 @@ export function useCampaignRealtime(
         scheduleReconnect();
       });
 
-      socket.addEventListener("error", (error) => {
-        console.error("[realtime] error", error);
-        socket?.close();
+      socket.addEventListener("error", () => {
+        console.warn("[realtime] socket error", {
+          readyState: socket?.readyState,
+          url
+        });
+        safeCloseSocket(socket, 4003, "Socket error");
       });
     }
 
@@ -278,7 +285,7 @@ export function useCampaignRealtime(
       closedByEffect = true;
       clearReconnectTimer();
       clearHeartbeatTimer();
-      closeSocket();
+      safeCloseSocket(socket);
     };
   }, [campaignId]);
 
