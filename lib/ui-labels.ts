@@ -56,6 +56,16 @@ export const locationTypeLabels: Record<string, string> = {
   scene: "Сцена"
 };
 
+export const scenePresentationModeLabels: Record<string, string> = {
+  tactical_map: "Тактическая карта",
+  illustration: "Иллюстрация / вид сцены"
+};
+
+export const imageFitLabels: Record<string, string> = {
+  contain: "Вписать полностью",
+  cover: "Заполнить область"
+};
+
 export function getLabel<T extends string>(
   map: Partial<Record<T, string>>,
   value: T | null | undefined,

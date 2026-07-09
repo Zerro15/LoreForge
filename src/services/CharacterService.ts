@@ -1,3 +1,5 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { FastifyRequest } from "fastify";
 import { PoolClient } from "pg";
 import {
@@ -15,6 +17,7 @@ import {
   canEditCharacter,
   canManageAnyCharacter
 } from "../domain/character/rules";
+import { imageMimeTypes } from "./LocationService";
 
 export type CharacterInput = {
   name: string;
@@ -149,6 +152,18 @@ async function selectCharacter(
     ch.current_location_id,
     ch.current_scene_id,
     ch.avatar_attachment_id,
+    ca.public_url AS avatar_url,
+    CASE
+      WHEN ca.attachment_id IS NULL THEN NULL
+      ELSE JSONB_BUILD_OBJECT(
+        'attachment_id', ca.attachment_id,
+        'filename', ca.filename,
+        'mime_type', ca.mime_type,
+        'file_size_bytes', ca.file_size_bytes,
+        'public_url', ca.public_url,
+        'metadata', ca.metadata
+      )
+    END AS avatar_attachment,
     ch.name,
     ch.title,
     ch.public_description,
@@ -171,6 +186,7 @@ async function selectCharacter(
     COALESCE(resources.resources, '[]'::JSONB) AS resources,
     COALESCE(abilities.abilities, '[]'::JSONB) AS abilities
   FROM "character" ch
+  LEFT JOIN attachment ca ON ca.attachment_id = ch.avatar_attachment_id
   LEFT JOIN app_user u ON u.user_id = ch.owner_user_id
   LEFT JOIN LATERAL (
     SELECT JSONB_AGG(
@@ -252,6 +268,18 @@ export class CharacterService {
         ch.current_location_id,
         ch.current_scene_id,
         ch.avatar_attachment_id,
+        ca.public_url AS avatar_url,
+        CASE
+          WHEN ca.attachment_id IS NULL THEN NULL
+          ELSE JSONB_BUILD_OBJECT(
+            'attachment_id', ca.attachment_id,
+            'filename', ca.filename,
+            'mime_type', ca.mime_type,
+            'file_size_bytes', ca.file_size_bytes,
+            'public_url', ca.public_url,
+            'metadata', ca.metadata
+          )
+        END AS avatar_attachment,
         ch.name,
         ch.title,
         ch.public_description,
@@ -274,6 +302,7 @@ export class CharacterService {
         COALESCE(resources.resources, '[]'::JSONB) AS resources,
         COALESCE(abilities.abilities, '[]'::JSONB) AS abilities
       FROM "character" ch
+      LEFT JOIN attachment ca ON ca.attachment_id = ch.avatar_attachment_id
       LEFT JOIN app_user u ON u.user_id = ch.owner_user_id
       LEFT JOIN LATERAL (
         SELECT JSONB_AGG(
@@ -553,5 +582,121 @@ export class CharacterService {
     });
 
     return archived ? toCharacterDTO(archived, access) : null;
+  }
+
+  static async uploadPortraitForRequest(
+    request: FastifyRequest,
+    campaignId: number,
+    characterId: number,
+    file: {
+      filename: string;
+      mimetype: string;
+      toBuffer: () => Promise<Buffer>;
+    },
+    options: {
+      storagePath: string;
+      publicUrl: string;
+      originalFilename: string;
+    }
+  ) {
+    const access = await requireCampaignMember(request, campaignId);
+    const before = await selectCharacter(campaignId, characterId, access);
+
+    if (!before) {
+      return null;
+    }
+
+    if (
+      !canEditCharacter(
+        access.permissions.role,
+        access.user.user_id,
+        before.owner_user_id ? String(before.owner_user_id) : null
+      )
+    ) {
+      forbid("Character portrait upload is not allowed for this role");
+    }
+
+    if (!imageMimeTypes.has(file.mimetype)) {
+      const error = new Error("Only PNG, JPEG and WEBP images are supported");
+      error.name = "ValidationError";
+      throw error;
+    }
+
+    const buffer = await file.toBuffer();
+
+    if (buffer.length > 10 * 1024 * 1024) {
+      const error = new Error("Image is larger than 10MB");
+      error.name = "ValidationError";
+      throw error;
+    }
+
+    await mkdir(path.dirname(options.storagePath), { recursive: true });
+    await writeFile(options.storagePath, buffer);
+
+    const uploaded = await withTransaction(async (client) => {
+      const attachment = await client.query(
+        `
+        INSERT INTO attachment (
+          campaign_id,
+          owner_user_id,
+          filename,
+          mime_type,
+          file_size_bytes,
+          storage_kind,
+          storage_path,
+          public_url,
+          metadata,
+          is_public,
+          visibility
+        )
+        VALUES ($1, $2, $3, $4, $5, 'local', $6, $7, $8, TRUE, 'party_only')
+        RETURNING *
+        `,
+        [
+          campaignId,
+          access.user.user_id,
+          options.originalFilename,
+          file.mimetype,
+          buffer.length,
+          options.storagePath,
+          options.publicUrl,
+          JSON.stringify({
+            originalFilename: options.originalFilename,
+            uploadedFor: "character_portrait",
+            characterId
+          })
+        ]
+      );
+
+      await client.query(
+        `
+        UPDATE "character"
+        SET avatar_attachment_id = $3,
+            updated_at = NOW()
+        WHERE campaign_id = $1 AND character_id = $2
+        `,
+        [campaignId, characterId, attachment.rows[0].attachment_id]
+      );
+
+      await client.query(
+        `
+        INSERT INTO audit_log (campaign_id, user_id, action, entity_type, entity_id, after_json)
+        VALUES ($1, $2, 'character.portrait.upload', 'character', $3, $4)
+        `,
+        [
+          campaignId,
+          access.user.user_id,
+          characterId,
+          JSON.stringify({ attachment: attachment.rows[0] })
+        ]
+      );
+
+      return {
+        attachment: attachment.rows[0],
+        portraitUrl: attachment.rows[0].public_url
+      };
+    });
+
+    return uploaded;
   }
 }

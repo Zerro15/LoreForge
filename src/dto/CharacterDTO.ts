@@ -35,6 +35,9 @@ export function toCharacterDTO(
     avatar_attachment_id: row.avatar_attachment_id
       ? String(row.avatar_attachment_id)
       : null,
+    avatar_url: row.avatar_url ?? null,
+    portrait_url: row.avatar_url ?? null,
+    avatar_attachment: row.avatar_attachment ?? null,
     name: row.name,
     title: row.title,
     public_description: row.public_description,

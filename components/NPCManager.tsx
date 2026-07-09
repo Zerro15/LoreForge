@@ -13,7 +13,8 @@ import {
   getNpcs,
   getTags,
   type NpcInput,
-  updateNpc
+  updateNpc,
+  uploadNpcPortrait
 } from "@/lib/api";
 import { visibilityLabels } from "@/lib/ui-labels";
 import type { Dashboard, Location, Npc, Tag, Visibility } from "@/lib/types";
@@ -151,6 +152,18 @@ export function NPCManager({ campaignId }: { campaignId: string }) {
     await loadData();
   }
 
+  async function handlePortraitUpload(npc: Npc, file: File) {
+    const result = await uploadNpcPortrait(campaignId, npc.npc_id, file);
+
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+
+    setNotice("Портрет NPC обновлён.");
+    await loadData();
+  }
+
   async function handleSaved() {
     setEditorOpen(false);
     setSelectedNpc(null);
@@ -214,6 +227,7 @@ export function NPCManager({ campaignId }: { campaignId: string }) {
               npc={npc}
               onArchive={handleArchive}
               onEdit={openEdit}
+              onPortraitUpload={canManage ? handlePortraitUpload : undefined}
             />
           ))}
         </div>
@@ -336,7 +350,7 @@ function NPCEditorModal({
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <div className="text-sm font-semibold text-[#A78BFA]">
-              NPC editor
+              Редактор NPC
             </div>
             <h2 className="mt-1 text-2xl font-semibold">{title}</h2>
           </div>
@@ -411,7 +425,7 @@ function NPCEditorModal({
           </Field>
 
           <div className="grid gap-4 md:grid-cols-3">
-            <Field label="Visibility">
+            <Field label="Видимость">
               <Select
                 onChange={(event) =>
                   updateField("visibility", event.target.value as Visibility)

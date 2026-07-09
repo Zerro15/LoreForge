@@ -48,6 +48,8 @@ LoreForge собирает кампанию в единую систему:
 - Активный world plugin `Mistbound`.
 - Play Room: активная сцена, локации, чат, кубики и запросы переходов.
 - Базовый VTT-слой: токены персонажей, NPC и маркеры поверх карты сцены.
+- Режимы сцен: тактическая карта или крупная иллюстрация.
+- Портреты персонажей и NPC с fallback в токены карты.
 - Fog of War: персональная видимость карты для игроков и GM-контроль раскрытых областей.
 - Realtime WebSocket слой для live updates в Play Room.
 - Карточки персонажей с путём, последовательностью, духовностью, рассудком, усвоением и риском потери контроля.
@@ -253,6 +255,7 @@ alice@example.com / password123
 - [docs/frontend.md](docs/frontend.md) — frontend.
 - [docs/backend-api.md](docs/backend-api.md) — backend API.
 - [docs/tokens.md](docs/tokens.md) — токены карты и базовый VTT-слой.
+- [docs/scenes.md](docs/scenes.md) — сцены, tactical map и illustration mode.
 - [docs/fog-of-war.md](docs/fog-of-war.md) — Fog of War и видимость карты.
 - [docs/realtime.md](docs/realtime.md) — WebSocket realtime слой.
 - [docs/deployment-split.md](docs/deployment-split.md) — план будущего split frontend/backend.

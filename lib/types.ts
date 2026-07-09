@@ -87,6 +87,9 @@ export type Character = {
   current_location_id?: string | null;
   current_scene_id?: string | null;
   avatar_attachment_id?: string | null;
+  avatar_url?: string | null;
+  portrait_url?: string | null;
+  avatar_attachment?: Attachment | null;
   name: string;
   title: string | null;
   public_description: string | null;
@@ -131,6 +134,9 @@ export type CharacterPreview = Pick<
 export type NpcPreview = {
   npc_id: string;
   campaign_id?: string;
+  portrait_attachment_id?: string | null;
+  portrait_url?: string | null;
+  portrait_attachment?: Attachment | null;
   name: string;
   title: string | null;
   public_description: string | null;
@@ -200,6 +206,8 @@ export type Scene = {
   sort_order: number;
   is_active: boolean;
   visibility: Visibility;
+  presentation_mode?: "tactical_map" | "illustration";
+  image_fit?: "contain" | "cover";
   status: "active" | "hidden" | "archived";
   archived_at: string | null;
   created_at: string;
@@ -243,8 +251,10 @@ export type SceneToken = {
     entity_type: "character" | "npc";
     entity_id: string;
     name: string;
+    portrait_url?: string | null;
   } | null;
   image_attachment?: Attachment | null;
+  image_url?: string | null;
 };
 
 export type VisionArea = {

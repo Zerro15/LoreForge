@@ -2,6 +2,8 @@
 
 Токены карты — базовый слой VTT в LoreForge. Они показываются поверх изображения сцены в Play Room.
 
+Токены показываются в режиме сцены `tactical_map`. В режиме `illustration` frontend скрывает тактические слои, чтобы картинка сцены оставалась главным объектом экрана.
+
 ## Модель
 
 - `Location` — контейнер мира.
@@ -49,6 +51,17 @@
 - public marker tokens;
 - public NPC tokens, если ГМ решит их открыть.
 
+## Изображение токена
+
+Токен выбирает картинку в таком порядке:
+
+1. собственный `image_attachment_id`;
+2. portrait персонажа через `character.avatar_attachment_id`;
+3. portrait NPC через `npc.portrait_attachment_id`;
+4. fallback: первая буква имени или marker-иконка.
+
+Портреты рисуются круглыми через CSS (`rounded-full`, `object-cover`). `gm_only` токены не отдаются player/viewer, поэтому портреты скрытых NPC не утекают через карту.
+
 Игрок не видит `gm_only` NPC и скрытые маркеры.
 
 ## Интеграция с персонажами
@@ -71,6 +84,6 @@ DELETE /api/campaigns/:campaignId/tokens/:tokenId
 - Нет combat.
 - Нет инициативы.
 - Нет урона.
-- Нет fog of war.
+- Нет combat, initiative и damage.
 - Нет сложного редактора карты.
 - Нет real-time синхронизации через WebSocket.

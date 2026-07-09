@@ -1,5 +1,7 @@
+import path from "node:path";
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { LocationService, uploadRoot } from "../services/LocationService";
 import { NPCService } from "../services/NPCService";
 
 const campaignParamsSchema = z.object({
@@ -89,6 +91,37 @@ export async function npcsRoutes(app: FastifyInstance) {
     }
 
     return { ok: true, npc: archived };
+  });
+
+  app.post("/api/campaigns/:campaignId/npcs/:npcId/portrait", async (request, reply) => {
+    const { campaignId, npcId } = npcParamsSchema.parse(request.params);
+    const file = await request.file();
+
+    if (!file) {
+      return reply.code(400).send({ error: "Image file is required" });
+    }
+
+    const filename = LocationService.safeUploadedFilename(file.filename);
+    const relativeDir = path.join("campaigns", String(campaignId), "npcs");
+    const storagePath = path.join(uploadRoot, relativeDir, filename);
+    const publicUrl = `/uploads/${relativeDir.replaceAll(path.sep, "/")}/${filename}`;
+    const result = await NPCService.uploadPortraitForRequest(
+      request,
+      campaignId,
+      npcId,
+      file,
+      {
+        storagePath,
+        publicUrl,
+        originalFilename: file.filename
+      }
+    );
+
+    if (!result) {
+      return reply.code(404).send({ error: "NPC not found" });
+    }
+
+    return reply.code(201).send(result);
   });
 
   app.get("/api/campaigns/:campaignId/tags", async (request) => {

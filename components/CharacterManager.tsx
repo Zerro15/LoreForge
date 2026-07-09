@@ -11,7 +11,8 @@ import {
   getCurrentUser,
   getDashboard,
   type CharacterInput,
-  updateCharacter
+  updateCharacter,
+  uploadCharacterPortrait
 } from "@/lib/api";
 import { statusLabels, visibilityLabels } from "@/lib/ui-labels";
 import type { Character, CurrentUser, Dashboard, Visibility } from "@/lib/types";
@@ -162,6 +163,22 @@ export function CharacterManager({ campaignId }: { campaignId: string }) {
     await loadData();
   }
 
+  async function handlePortraitUpload(character: Character, file: File) {
+    const result = await uploadCharacterPortrait(
+      campaignId,
+      character.character_id,
+      file
+    );
+
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+
+    setNotice("Портрет персонажа обновлён.");
+    await loadData();
+  }
+
   async function handleSaved() {
     setEditorOpen(false);
     setSelectedCharacter(null);
@@ -225,6 +242,9 @@ export function CharacterManager({ campaignId }: { campaignId: string }) {
               key={character.character_id}
               onArchive={handleArchive}
               onEdit={openEdit}
+              onPortraitUpload={
+                canManageCharacter(character) ? handlePortraitUpload : undefined
+              }
             />
           ))}
         </div>

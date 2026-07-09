@@ -157,7 +157,7 @@ export async function diceRoutes(app: FastifyInstance) {
           chatId,
           access.user.user_id,
           body.characterId ?? null,
-          `${actorName} rolls ${body.formula}.`,
+          `${actorName} бросает ${body.formula}.`,
           body.formula,
           parsedFormula.diceCount,
           parsedFormula.diceType,
@@ -190,7 +190,7 @@ export async function diceRoutes(app: FastifyInstance) {
           chatId,
           access.user.user_id,
           body.characterId ?? null,
-          `${actorName} rolls ${body.formula}: ${result.total}.`,
+          `${actorName} бросает ${body.formula}: ${result.total}.`,
           body.visibility,
           JSON.stringify({
             expression: body.formula,

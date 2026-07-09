@@ -50,35 +50,40 @@ export class TokenService {
           WHEN st.entity_type = 'character' AND ch.character_id IS NOT NULL THEN JSONB_BUILD_OBJECT(
             'entity_type', 'character',
             'entity_id', ch.character_id,
-            'name', ch.name
+            'name', ch.name,
+            'portrait_url', cha.public_url
           )
           WHEN st.entity_type = 'npc' AND n.npc_id IS NOT NULL THEN JSONB_BUILD_OBJECT(
             'entity_type', 'npc',
             'entity_id', n.npc_id,
-            'name', n.name
+            'name', n.name,
+            'portrait_url', npa.public_url
           )
           ELSE NULL
         END AS entity,
         CASE
-          WHEN a.attachment_id IS NULL THEN NULL
+          WHEN COALESCE(a.attachment_id, cha.attachment_id, npa.attachment_id) IS NULL THEN NULL
           ELSE JSONB_BUILD_OBJECT(
-            'attachment_id', a.attachment_id,
-            'filename', a.filename,
-            'mime_type', a.mime_type,
-            'file_size_bytes', a.file_size_bytes,
-            'public_url', a.public_url,
-            'metadata', a.metadata
+            'attachment_id', COALESCE(a.attachment_id, cha.attachment_id, npa.attachment_id),
+            'filename', COALESCE(a.filename, cha.filename, npa.filename),
+            'mime_type', COALESCE(a.mime_type, cha.mime_type, npa.mime_type),
+            'file_size_bytes', COALESCE(a.file_size_bytes, cha.file_size_bytes, npa.file_size_bytes),
+            'public_url', COALESCE(a.public_url, cha.public_url, npa.public_url),
+            'metadata', COALESCE(a.metadata, cha.metadata, npa.metadata)
           )
-        END AS image_attachment
+        END AS image_attachment,
+        COALESCE(a.public_url, cha.public_url, npa.public_url) AS image_url
       FROM scene_token st
       LEFT JOIN "character" ch
         ON st.entity_type = 'character'
        AND ch.character_id = st.entity_id
        AND ch.campaign_id = st.campaign_id
+      LEFT JOIN attachment cha ON cha.attachment_id = ch.avatar_attachment_id
       LEFT JOIN npc n
         ON st.entity_type = 'npc'
        AND n.npc_id = st.entity_id
        AND n.campaign_id = st.campaign_id
+      LEFT JOIN attachment npa ON npa.attachment_id = n.portrait_attachment_id
       LEFT JOIN attachment a ON a.attachment_id = st.image_attachment_id
     `;
   }

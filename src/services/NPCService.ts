@@ -1,3 +1,5 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { FastifyRequest } from "fastify";
 import { PoolClient } from "pg";
 import {
@@ -12,6 +14,7 @@ import {
   toTagListDTO
 } from "../dto/NPCDTO";
 import { query, queryOne, withTransaction } from "../db";
+import { imageMimeTypes } from "./LocationService";
 
 export type NPCInput = {
   name: string;
@@ -94,6 +97,7 @@ async function selectNpc(
     n.npc_id,
     n.campaign_id,
     n.group_id,
+    n.portrait_attachment_id,
     n.name,
     n.title,
     n.public_description,
@@ -106,6 +110,18 @@ async function selectNpc(
     n.archived_at,
     n.created_at,
     n.updated_at,
+    CASE
+      WHEN pa.attachment_id IS NULL THEN NULL
+      ELSE JSONB_BUILD_OBJECT(
+        'attachment_id', pa.attachment_id,
+        'filename', pa.filename,
+        'mime_type', pa.mime_type,
+        'file_size_bytes', pa.file_size_bytes,
+        'public_url', pa.public_url,
+        'metadata', pa.metadata
+      )
+    END AS portrait_attachment,
+    pa.public_url AS portrait_url,
     COALESCE(
       JSON_AGG(
         DISTINCT JSONB_BUILD_OBJECT(
@@ -117,13 +133,14 @@ async function selectNpc(
       '[]'
     ) AS tags
   FROM npc n
+  LEFT JOIN attachment pa ON pa.attachment_id = n.portrait_attachment_id
   LEFT JOIN entity_tag et ON et.entity_type = 'npc' AND et.entity_id = n.npc_id
   LEFT JOIN tag t ON t.tag_id = et.tag_id
   WHERE n.campaign_id = $1
     AND n.npc_id = $2
     AND n.status <> 'archived'
     AND ($3::BOOLEAN OR n.visibility IN ('public', 'party_only'))
-  GROUP BY n.npc_id
+  GROUP BY n.npc_id, pa.attachment_id
   `;
 
   const params = [campaignId, npcId, canViewSecrets];
@@ -151,6 +168,7 @@ export class NPCService {
       SELECT
         n.npc_id,
         n.campaign_id,
+        n.portrait_attachment_id,
         n.name,
         n.title,
         n.public_description,
@@ -161,6 +179,18 @@ export class NPCService {
         n.visibility,
         n.status,
         n.archived_at,
+        CASE
+          WHEN pa.attachment_id IS NULL THEN NULL
+          ELSE JSONB_BUILD_OBJECT(
+            'attachment_id', pa.attachment_id,
+            'filename', pa.filename,
+            'mime_type', pa.mime_type,
+            'file_size_bytes', pa.file_size_bytes,
+            'public_url', pa.public_url,
+            'metadata', pa.metadata
+          )
+        END AS portrait_attachment,
+        pa.public_url AS portrait_url,
         COALESCE(
           JSON_AGG(
             DISTINCT JSONB_BUILD_OBJECT(
@@ -172,12 +202,13 @@ export class NPCService {
           '[]'
         ) AS tags
       FROM npc n
+      LEFT JOIN attachment pa ON pa.attachment_id = n.portrait_attachment_id
       LEFT JOIN entity_tag et ON et.entity_type = 'npc' AND et.entity_id = n.npc_id
       LEFT JOIN tag t ON t.tag_id = et.tag_id
       WHERE n.campaign_id = $1
         AND n.status <> 'archived'
         AND ($2::BOOLEAN OR n.visibility IN ('public', 'party_only'))
-      GROUP BY n.npc_id
+      GROUP BY n.npc_id, pa.attachment_id
       ORDER BY n.name
       `,
       [campaignId, access.permissions.canViewGMSecrets]
@@ -435,5 +466,113 @@ export class NPCService {
     );
 
     return tag ? toTagDTO(tag) : null;
+  }
+
+  static async uploadPortraitForRequest(
+    request: FastifyRequest,
+    campaignId: number,
+    npcId: number,
+    file: {
+      filename: string;
+      mimetype: string;
+      toBuffer: () => Promise<Buffer>;
+    },
+    options: {
+      storagePath: string;
+      publicUrl: string;
+      originalFilename: string;
+    }
+  ) {
+    const access = await requireGameMaster(request, campaignId);
+
+    if (!imageMimeTypes.has(file.mimetype)) {
+      const error = new Error("Only PNG, JPEG and WEBP images are supported");
+      error.name = "ValidationError";
+      throw error;
+    }
+
+    const buffer = await file.toBuffer();
+
+    if (buffer.length > 10 * 1024 * 1024) {
+      const error = new Error("Image is larger than 10MB");
+      error.name = "ValidationError";
+      throw error;
+    }
+
+    await mkdir(path.dirname(options.storagePath), { recursive: true });
+    await writeFile(options.storagePath, buffer);
+
+    return withTransaction(async (client) => {
+      const npc = await client.query(
+        "SELECT npc_id FROM npc WHERE campaign_id = $1 AND npc_id = $2 AND status <> 'archived'",
+        [campaignId, npcId]
+      );
+
+      if (!npc.rows[0]) {
+        return null;
+      }
+
+      const attachment = await client.query(
+        `
+        INSERT INTO attachment (
+          campaign_id,
+          owner_user_id,
+          filename,
+          mime_type,
+          file_size_bytes,
+          storage_kind,
+          storage_path,
+          public_url,
+          metadata,
+          is_public,
+          visibility
+        )
+        VALUES ($1, $2, $3, $4, $5, 'local', $6, $7, $8, TRUE, 'party_only')
+        RETURNING *
+        `,
+        [
+          campaignId,
+          access.user.user_id,
+          options.originalFilename,
+          file.mimetype,
+          buffer.length,
+          options.storagePath,
+          options.publicUrl,
+          JSON.stringify({
+            originalFilename: options.originalFilename,
+            uploadedFor: "npc_portrait",
+            npcId
+          })
+        ]
+      );
+
+      await client.query(
+        `
+        UPDATE npc
+        SET portrait_attachment_id = $3,
+            updated_at = NOW()
+        WHERE campaign_id = $1 AND npc_id = $2
+        `,
+        [campaignId, npcId, attachment.rows[0].attachment_id]
+      );
+
+      await client.query(
+        `
+        INSERT INTO audit_log (campaign_id, user_id, action, entity_type, entity_id, after_json)
+        VALUES ($1, $2, 'npc.portrait.upload', 'npc', $3, $4)
+        `,
+        [
+          campaignId,
+          access.user.user_id,
+          npcId,
+          JSON.stringify({ attachment: attachment.rows[0] })
+        ]
+      );
+
+      return {
+        attachment: attachment.rows[0],
+        portraitUrl: attachment.rows[0].public_url
+      };
+    });
   }
 }

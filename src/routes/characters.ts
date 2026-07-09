@@ -1,5 +1,7 @@
+import path from "node:path";
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { LocationService, uploadRoot } from "../services/LocationService";
 import { CharacterService } from "../services/CharacterService";
 
 const campaignParamsSchema = z.object({
@@ -117,6 +119,42 @@ export async function charactersRoutes(app: FastifyInstance) {
       }
 
       return { ok: true, character: archived };
+    }
+  );
+
+  app.post(
+    "/api/campaigns/:campaignId/characters/:characterId/portrait",
+    async (request, reply) => {
+      const { campaignId, characterId } = characterParamsSchema.parse(
+        request.params
+      );
+      const file = await request.file();
+
+      if (!file) {
+        return reply.code(400).send({ error: "Image file is required" });
+      }
+
+      const filename = LocationService.safeUploadedFilename(file.filename);
+      const relativeDir = path.join("campaigns", String(campaignId), "characters");
+      const storagePath = path.join(uploadRoot, relativeDir, filename);
+      const publicUrl = `/uploads/${relativeDir.replaceAll(path.sep, "/")}/${filename}`;
+      const result = await CharacterService.uploadPortraitForRequest(
+        request,
+        campaignId,
+        characterId,
+        file,
+        {
+          storagePath,
+          publicUrl,
+          originalFilename: file.filename
+        }
+      );
+
+      if (!result) {
+        return reply.code(404).send({ error: "Character not found" });
+      }
+
+      return reply.code(201).send(result);
     }
   );
 }

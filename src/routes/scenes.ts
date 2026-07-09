@@ -39,6 +39,8 @@ const sceneBodySchema = z.object({
   publicDescription: z.string().trim().optional().nullable(),
   gmDescription: z.string().trim().optional().nullable(),
   visibility: visibilitySchema.default("party_only"),
+  presentationMode: z.enum(["tactical_map", "illustration"]).default("tactical_map"),
+  imageFit: z.enum(["contain", "cover"]).default("contain"),
   sortOrder: z.coerce.number().int().default(0)
 });
 
@@ -65,6 +67,8 @@ function sceneListQuery() {
       s.sort_order,
       s.is_active,
       s.visibility,
+      s.presentation_mode,
+      s.image_fit,
       s.status,
       s.archived_at,
       s.created_at,
@@ -199,10 +203,12 @@ export async function scenesRoutes(app: FastifyInstance) {
         public_description,
         gm_description,
         visibility,
+        presentation_mode,
+        image_fit,
         sort_order,
         status
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'active')
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'active')
       RETURNING *
       `,
       [
@@ -213,6 +219,8 @@ export async function scenesRoutes(app: FastifyInstance) {
         body.publicDescription ?? null,
         body.gmDescription ?? null,
         body.visibility,
+        body.presentationMode,
+        body.imageFit,
         body.sortOrder
       ]
     );
@@ -233,9 +241,11 @@ export async function scenesRoutes(app: FastifyInstance) {
           public_description = COALESCE($5, public_description),
           gm_description = COALESCE($6, gm_description),
           visibility = COALESCE($7, visibility),
-          sort_order = COALESCE($8, sort_order),
-          status = COALESCE($9, status),
-          archived_at = CASE WHEN $9 = 'archived' THEN NOW() ELSE archived_at END,
+          presentation_mode = COALESCE($8, presentation_mode),
+          image_fit = COALESCE($9, image_fit),
+          sort_order = COALESCE($10, sort_order),
+          status = COALESCE($11, status),
+          archived_at = CASE WHEN $11 = 'archived' THEN NOW() ELSE archived_at END,
           updated_at = NOW()
       WHERE campaign_id = $1
         AND scene_id = $2
@@ -249,6 +259,8 @@ export async function scenesRoutes(app: FastifyInstance) {
         body.publicDescription ?? null,
         body.gmDescription ?? null,
         body.visibility ?? null,
+        body.presentationMode ?? null,
+        body.imageFit ?? null,
         body.sortOrder ?? null,
         body.status ?? null
       ]
@@ -295,10 +307,10 @@ export async function scenesRoutes(app: FastifyInstance) {
         campaignId,
         userId: auth.user.user_id,
         eventType: "scene_activated",
-        title: `Active scene: ${activeScene.name}`,
-        description: "GM changed the active play scene.",
+        title: `ГМ сменил активную сцену: ${activeScene.name}`,
+        description: "ГМ сменил активную сцену игровой комнаты.",
         locationId: activeScene.location_id,
-        chatMessage: `GM changes the active scene: ${activeScene.name}.`
+        chatMessage: `ГМ сменил активную сцену: ${activeScene.name}.`
       });
       return activeScene;
     });

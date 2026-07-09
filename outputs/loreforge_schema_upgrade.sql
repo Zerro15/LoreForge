@@ -209,6 +209,12 @@ ALTER TABLE scene
 ALTER TABLE scene
     ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
 
+ALTER TABLE scene
+    ADD COLUMN IF NOT EXISTS presentation_mode TEXT NOT NULL DEFAULT 'tactical_map';
+
+ALTER TABLE scene
+    ADD COLUMN IF NOT EXISTS image_fit TEXT NOT NULL DEFAULT 'contain';
+
 ALTER TABLE campaign_member
     ADD COLUMN IF NOT EXISTS current_location_id BIGINT;
 
@@ -223,6 +229,22 @@ BEGIN
         ALTER TABLE scene
             ADD CONSTRAINT scene_status_check
             CHECK (status IN ('active', 'hidden', 'archived'));
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'scene_presentation_mode_check'
+    ) THEN
+        ALTER TABLE scene
+            ADD CONSTRAINT scene_presentation_mode_check
+            CHECK (presentation_mode IN ('tactical_map', 'illustration'));
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'scene_image_fit_check'
+    ) THEN
+        ALTER TABLE scene
+            ADD CONSTRAINT scene_image_fit_check
+            CHECK (image_fit IN ('contain', 'cover'));
     END IF;
 
     IF NOT EXISTS (
@@ -252,6 +274,9 @@ ALTER TABLE npc
 ALTER TABLE npc
     ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
 
+ALTER TABLE npc
+    ADD COLUMN IF NOT EXISTS portrait_attachment_id BIGINT;
+
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -260,6 +285,16 @@ BEGIN
         ALTER TABLE npc
             ADD CONSTRAINT npc_status_check
             CHECK (status IN ('active', 'archived'));
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'npc_portrait_attachment_fk'
+    ) THEN
+        ALTER TABLE npc
+            ADD CONSTRAINT npc_portrait_attachment_fk
+            FOREIGN KEY (portrait_attachment_id)
+            REFERENCES attachment(attachment_id)
+            ON DELETE SET NULL;
     END IF;
 END $$;
 

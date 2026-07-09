@@ -44,6 +44,7 @@ import {
   revokeLocationAccess,
   sendChatMessage,
   updateLocation,
+  updateScene,
   updateSceneToken,
   uploadSceneImage,
   uploadLocationImage
@@ -66,9 +67,11 @@ import type {
 } from "@/lib/types";
 import {
   getLabel,
+  imageFitLabels,
   locationTypeLabels,
   requestStatusLabels,
   roleLabels,
+  scenePresentationModeLabels,
   statusLabels,
   visibilityLabels
 } from "@/lib/ui-labels";
@@ -230,6 +233,9 @@ export function SceneImageCard({
   onVisionChanged: () => void;
 }) {
   const imageUrl = resolveAssetUrl(scene?.image?.attachment?.public_url);
+  const presentationMode = scene?.presentation_mode ?? "tactical_map";
+  const imageFit = scene?.image_fit ?? "cover";
+  const isIllustration = presentationMode === "illustration";
 
   return (
     <div className="relative h-[calc(100vh-8.25rem)] min-h-[680px] overflow-hidden rounded-3xl border border-[#273244]/90 bg-[#0B0F17] xl:min-h-[760px]">
@@ -237,32 +243,44 @@ export function SceneImageCard({
         // eslint-disable-next-line @next/next/no-img-element
         <img
           alt={scene?.name ?? "Сцена"}
-          className="absolute inset-0 h-full w-full object-cover"
+          className={`absolute inset-0 h-full w-full ${
+            imageFit === "contain" ? "object-contain" : "object-cover"
+          }`}
           src={imageUrl}
         />
       ) : (
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_32%_24%,rgba(139,92,246,0.26),transparent_34%),linear-gradient(135deg,#111827,#0B0F17_54%,#171A26)]" />
       )}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:64px_64px]" />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F17] via-[#0B0F17]/28 to-[#0B0F17]/10" />
+      {!isIllustration ? (
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:64px_64px]" />
+      ) : null}
+      <div
+        className={`absolute inset-0 ${
+          isIllustration
+            ? "bg-gradient-to-t from-[#0B0F17]/78 via-transparent to-[#0B0F17]/16"
+            : "bg-gradient-to-t from-[#0B0F17] via-[#0B0F17]/28 to-[#0B0F17]/10"
+        }`}
+      />
 
-      <VisionLayer isGm={isGm} vision={vision} />
+      {!isIllustration ? <VisionLayer isGm={isGm} vision={vision} /> : null}
 
-      {isGm ? (
+      {isGm && !isIllustration ? (
         <div className="absolute right-4 top-4 z-20 rounded-full border border-[#273244] bg-[#0B0F17]/80 px-3 py-1.5 text-xs text-[#c7ccd6] shadow-xl backdrop-blur">
           NPC-инструменты · только ГМ
         </div>
       ) : null}
 
-      <TokenLayer
-        campaignId={campaignId}
-        isGm={isGm}
-        onChanged={onTokensChanged}
-        scene={scene}
-        tokens={tokens}
-      />
+      {!isIllustration ? (
+        <TokenLayer
+          campaignId={campaignId}
+          isGm={isGm}
+          onChanged={onTokensChanged}
+          scene={scene}
+          tokens={tokens}
+        />
+      ) : null}
 
-      {isGm ? (
+      {isGm && !isIllustration ? (
         <VisionManager
           campaignId={campaignId}
           members={members}
@@ -273,7 +291,9 @@ export function SceneImageCard({
 
       <div className="relative z-20 flex h-full min-h-0 flex-col justify-end p-4 md:p-5">
         <div className="flex flex-wrap gap-2">
-          <Badge tone="purple">Сцена</Badge>
+          <Badge tone="purple">
+            {getLabel(scenePresentationModeLabels, presentationMode)}
+          </Badge>
           {scene?.is_current_for_user ? <Badge tone="green">Вы здесь</Badge> : null}
           {scene?.visibility ? (
             <Badge tone={scene.visibility === "gm_only" ? "danger" : "gold"}>
@@ -281,7 +301,11 @@ export function SceneImageCard({
             </Badge>
           ) : null}
         </div>
-        <div className="mt-3 max-w-3xl rounded-2xl border border-[#273244]/80 bg-[#0B0F17]/72 p-4 shadow-2xl backdrop-blur">
+        <div
+          className={`mt-3 rounded-2xl border border-[#273244]/80 bg-[#0B0F17]/72 p-4 shadow-2xl backdrop-blur ${
+            isIllustration ? "max-w-xl" : "max-w-3xl"
+          }`}
+        >
           <p className="text-xs text-[#9CA3AF]">
             {location?.name ?? scene?.location?.name ?? "Локация не выбрана"}
           </p>
@@ -602,6 +626,9 @@ export function TokenLayer({
         const y = Number(token.y);
         const labelText = token.label ?? token.entity?.name ?? "Объект";
         const isSecret = token.visibility !== "public";
+        const tokenImageUrl = resolveAssetUrl(
+          token.image_url ?? token.image_attachment?.public_url
+        );
 
         return (
           <div
@@ -630,7 +657,18 @@ export function TokenLayer({
                 width: `${Math.max(30, size * 42)}px`
               }}
             >
-              {token.entity_type === "marker" ? <MapPinned size={16} /> : labelText.slice(0, 1)}
+              {tokenImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  alt={labelText}
+                  className="h-full w-full rounded-full object-cover"
+                  src={tokenImageUrl}
+                />
+              ) : token.entity_type === "marker" ? (
+                <MapPinned size={16} />
+              ) : (
+                labelText.slice(0, 1)
+              )}
             </div>
             <div className="pointer-events-none mt-1 rounded-full border border-[#273244] bg-[#0B0F17]/80 px-2 py-0.5 text-center text-[11px] text-[#F5F2EA] shadow-lg">
               {labelText}
@@ -856,6 +894,10 @@ export function SceneManagerPanel({
   const [publicDescription, setPublicDescription] = useState("");
   const [gmDescription, setGmDescription] = useState("");
   const [visibility, setVisibility] = useState<Visibility>("party_only");
+  const [presentationMode, setPresentationMode] = useState<
+    "tactical_map" | "illustration"
+  >("tactical_map");
+  const [imageFit, setImageFit] = useState<"contain" | "cover">("contain");
   const [moveUserId, setMoveUserId] = useState(
     members.find((member) => member.role === "player")?.user_id ?? ""
   );
@@ -873,7 +915,9 @@ export function SceneManagerPanel({
       name,
       publicDescription,
       gmDescription,
-      visibility
+      visibility,
+      presentationMode,
+      imageFit
     });
 
     if (result.error) {
@@ -885,6 +929,20 @@ export function SceneManagerPanel({
     setPublicDescription("");
     setGmDescription("");
     onChanged();
+  }
+
+  async function updateScenePresentation(
+    scene: Scene,
+    patch: {
+      presentationMode?: "tactical_map" | "illustration";
+      imageFit?: "contain" | "cover";
+    }
+  ) {
+    const result = await updateScene(campaignId, scene.scene_id, patch);
+    setError(result.error);
+    if (!result.error) {
+      onChanged();
+    }
   }
 
   async function activate(sceneId: string) {
@@ -974,6 +1032,32 @@ export function SceneManagerPanel({
             </option>
           ))}
         </select>
+        <select
+          className="h-12 rounded-xl border border-[#273244] bg-[#0B0F17] px-3 text-sm"
+          onChange={(event) =>
+            setPresentationMode(
+              event.target.value as "tactical_map" | "illustration"
+            )
+          }
+          value={presentationMode}
+        >
+          {(["tactical_map", "illustration"] as const).map((option) => (
+            <option key={option} value={option}>
+              {getLabel(scenePresentationModeLabels, option)}
+            </option>
+          ))}
+        </select>
+        <select
+          className="h-12 rounded-xl border border-[#273244] bg-[#0B0F17] px-3 text-sm"
+          onChange={(event) => setImageFit(event.target.value as "contain" | "cover")}
+          value={imageFit}
+        >
+          {(["contain", "cover"] as const).map((option) => (
+            <option key={option} value={option}>
+              {getLabel(imageFitLabels, option)}
+            </option>
+          ))}
+        </select>
         <Button type="submit">
           <Plus size={16} />
           Создать сцену
@@ -1027,6 +1111,12 @@ export function SceneManagerPanel({
                   <Badge tone={scene.visibility === "gm_only" ? "danger" : "gold"}>
                     {getLabel(visibilityLabels, scene.visibility)}
                   </Badge>
+                  <Badge tone="muted">
+                    {getLabel(
+                      scenePresentationModeLabels,
+                      scene.presentation_mode ?? "tactical_map"
+                    )}
+                  </Badge>
                 </div>
                 <p className="mt-1 text-xs text-[#9CA3AF]">
                   {scene.location?.name ?? "Локация"} ·{" "}
@@ -1047,6 +1137,38 @@ export function SceneManagerPanel({
                   onUploaded={onChanged}
                   sceneId={scene.scene_id}
                 />
+                <select
+                  className="h-9 rounded-xl border border-[#273244] bg-[#0B0F17] px-2 text-xs"
+                  onChange={(event) =>
+                    void updateScenePresentation(scene, {
+                      presentationMode: event.target.value as
+                        | "tactical_map"
+                        | "illustration"
+                    })
+                  }
+                  value={scene.presentation_mode ?? "tactical_map"}
+                >
+                  {(["tactical_map", "illustration"] as const).map((option) => (
+                    <option key={option} value={option}>
+                      {getLabel(scenePresentationModeLabels, option)}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="h-9 rounded-xl border border-[#273244] bg-[#0B0F17] px-2 text-xs"
+                  onChange={(event) =>
+                    void updateScenePresentation(scene, {
+                      imageFit: event.target.value as "contain" | "cover"
+                    })
+                  }
+                  value={scene.image_fit ?? "contain"}
+                >
+                  {(["contain", "cover"] as const).map((option) => (
+                    <option key={option} value={option}>
+                      {getLabel(imageFitLabels, option)}
+                    </option>
+                  ))}
+                </select>
                 <Button
                   onClick={() => void move(scene.scene_id)}
                   type="button"

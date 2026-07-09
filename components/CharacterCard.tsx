@@ -1,7 +1,8 @@
-import { Activity, Brain, Eye, ShieldAlert, Sparkles, UserRound } from "lucide-react";
+import { Activity, Brain, Eye, ImagePlus, ShieldAlert, Sparkles, UserRound } from "lucide-react";
 import type { Character, CharacterPreview } from "@/lib/types";
 import { Badge, Card, Button, Meter, SecretBlock } from "./ui";
 import { visibilityLabels } from "@/lib/ui-labels";
+import { API_BASE_URL } from "@/lib/config";
 
 function findValue(
   items: Array<{ name: string; value?: number; current_value?: number }>,
@@ -27,15 +28,23 @@ function inferPath(character: Character | CharacterPreview) {
 export function CharacterCard({
   character,
   canManage,
+  onPortraitUpload,
   onArchive,
   onEdit
 }: {
   character: Character | CharacterPreview;
   canManage?: boolean;
+  onPortraitUpload?: (character: Character, file: File) => void;
   onArchive?: (character: Character) => void;
   onEdit?: (character: Character) => void;
 }) {
   const full = character as Character;
+  const portraitUrl =
+    "portrait_url" in full && full.portrait_url
+      ? full.portrait_url.startsWith("http")
+        ? full.portrait_url
+        : `${API_BASE_URL}${full.portrait_url}`
+      : null;
   const sequence =
     "stats" in full ? findValue(full.stats, "Последовательность")?.value : null;
   const spirituality =
@@ -54,13 +63,29 @@ export function CharacterCard({
   return (
     <Card className="p-5 hover:border-[#8B5CF6]/45">
       <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-semibold">{character.name}</h3>
-          <p className="mt-1 text-sm text-[#9CA3AF]">
-            {"owner" in character
-              ? character.owner?.display_name ?? "Без владельца"
-              : character.owner_display_name}
-          </p>
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full border border-[#8B5CF6]/45 bg-[#171A26]">
+            {portraitUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                alt={character.name}
+                className="h-full w-full object-cover"
+                src={portraitUrl}
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-[#A78BFA]">
+                {character.name.slice(0, 1)}
+              </div>
+            )}
+          </div>
+          <div className="min-w-0">
+            <h3 className="truncate text-lg font-semibold">{character.name}</h3>
+            <p className="mt-1 text-sm text-[#9CA3AF]">
+              {"owner" in character
+                ? character.owner?.display_name ?? "Без владельца"
+                : character.owner_display_name}
+            </p>
+          </div>
         </div>
         <div className="flex flex-col items-end gap-2">
           <Badge tone="blue">
@@ -154,6 +179,24 @@ export function CharacterCard({
           <Button onClick={() => onEdit?.(full)} type="button" variant="secondary">
             Редактировать
           </Button>
+          {onPortraitUpload ? (
+            <label className="inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#273244] bg-[#171A26]/90 px-4 py-2 text-sm font-semibold text-[#F5F2EA] transition hover:border-[#8B5CF6]/70">
+              <ImagePlus size={15} />
+              Портрет
+              <input
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) {
+                    onPortraitUpload(full, file);
+                  }
+                  event.currentTarget.value = "";
+                }}
+                type="file"
+              />
+            </label>
+          ) : null}
           <Button onClick={() => onArchive?.(full)} type="button" variant="danger">
             Архивировать
           </Button>

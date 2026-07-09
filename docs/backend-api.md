@@ -482,15 +482,20 @@ curl -b work\cookies.txt http://localhost:3001/api/campaigns/1/locations/3/scene
 
 Создаёт сцену внутри локации. Только `owner/gm/co_gm`.
 
+Body поддерживает:
+
+- `presentationMode`: `tactical_map` или `illustration`;
+- `imageFit`: `contain` или `cover`.
+
 ```powershell
 curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/locations/3/scenes `
   -H "Content-Type: application/json" `
-  -d '{"name":"Подвал","sceneType":"investigation","publicDescription":"Сырой подвал под аптекой.","gmDescription":"В стене спрятан тайник.","visibility":"hidden_until_discovered"}'
+  -d '{"name":"Подвал","sceneType":"investigation","publicDescription":"Сырой подвал под аптекой.","gmDescription":"В стене спрятан тайник.","visibility":"hidden_until_discovered","presentationMode":"tactical_map","imageFit":"contain"}'
 ```
 
 ### PATCH `/api/campaigns/:campaignId/scenes/:sceneId`
 
-Редактирует название, описания, visibility, sort order и status сцены. Только для ГМа.
+Редактирует название, описания, visibility, sort order, status, `presentationMode` и `imageFit` сцены. Только для ГМа.
 
 ```powershell
 curl -b work\cookies.txt -X PATCH http://localhost:3001/api/campaigns/1/scenes/7 `
@@ -523,6 +528,32 @@ curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/scenes/3/
   -F "file=@C:\path\to\scene-map.webp"
 ```
 
+### POST `/api/campaigns/:campaignId/npcs/:npcId/portrait`
+
+Загружает портрет NPC. Только `owner/gm/co_gm`.
+
+Файл хранится локально в `uploads/campaigns/:campaignId/npcs/`, а в `npc.portrait_attachment_id` сохраняется ссылка на attachment.
+
+```powershell
+curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/npcs/1/portrait `
+  -F "file=@C:\path\to\npc-portrait.webp"
+```
+
+### POST `/api/campaigns/:campaignId/characters/:characterId/portrait`
+
+Загружает портрет персонажа.
+
+Доступ:
+
+- `owner/gm/co_gm` могут менять портрет любого персонажа;
+- `player` может менять портрет только своего персонажа;
+- `viewer` получает `403`.
+
+```powershell
+curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/characters/1/portrait `
+  -F "file=@C:\path\to\character-portrait.webp"
+```
+
 ### POST `/api/campaigns/:campaignId/scenes/:sceneId/move-player`
 
 ГМ перемещает игрока на сцену. Backend обновляет `campaign_member.current_location_id/current_scene_id`, открывает доступ к локации и помечает сцену как известную через `scene_player_state`.
@@ -536,6 +567,13 @@ curl -b work\cookies.txt -X POST http://localhost:3001/api/campaigns/1/scenes/3/
 ## Токены карты
 
 Токены отображаются поверх карты сцены в Play Room. Позиция хранится в процентах `x/y`.
+
+Изображение токена выбирается в порядке:
+
+1. `scene_token.image_attachment_id`;
+2. portrait персонажа;
+3. portrait NPC;
+4. fallback по первой букве имени или marker-иконке.
 
 ### GET `/api/campaigns/:campaignId/scenes/:sceneId/tokens`
 

@@ -320,6 +320,8 @@ export type SceneInput = {
   publicDescription?: string | null;
   gmDescription?: string | null;
   visibility: Visibility;
+  presentationMode?: "tactical_map" | "illustration";
+  imageFit?: "contain" | "cover";
   sortOrder?: number;
 };
 
@@ -387,6 +389,40 @@ export function uploadSceneImage(
 
   return requestApi<{ sceneImage: unknown; attachment: unknown }>(
     `/api/campaigns/${campaignId}/scenes/${sceneId}/image`,
+    {
+      method: "POST",
+      body
+    }
+  );
+}
+
+export function uploadNpcPortrait(
+  campaignId: string,
+  npcId: string,
+  file: File
+) {
+  const body = new FormData();
+  body.append("file", file);
+
+  return requestApi<{ attachment: unknown; portraitUrl: string }>(
+    `/api/campaigns/${campaignId}/npcs/${npcId}/portrait`,
+    {
+      method: "POST",
+      body
+    }
+  );
+}
+
+export function uploadCharacterPortrait(
+  campaignId: string,
+  characterId: string,
+  file: File
+) {
+  const body = new FormData();
+  body.append("file", file);
+
+  return requestApi<{ attachment: unknown; portraitUrl: string }>(
+    `/api/campaigns/${campaignId}/characters/${characterId}/portrait`,
     {
       method: "POST",
       body

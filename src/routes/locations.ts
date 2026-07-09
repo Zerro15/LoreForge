@@ -417,10 +417,10 @@ export async function locationsRoutes(app: FastifyInstance) {
         campaignId,
         userId: auth.user.user_id,
         eventType: "location_activated",
-        title: `Active location: ${location.name}`,
-        description: "GM changed the central play scene.",
+        title: `ГМ сменил активную локацию: ${location.name}`,
+        description: "ГМ сменил центральную локацию игровой комнаты.",
         locationId,
-        chatMessage: `GM changes the active location: ${location.name}.`
+        chatMessage: `ГМ сменил активную локацию: ${location.name}.`
       });
     });
 
@@ -574,10 +574,10 @@ export async function locationsRoutes(app: FastifyInstance) {
         campaignId,
         userId: auth.user.user_id,
         eventType: "location_access_granted",
-        title: `Location access granted: ${location.rows[0].name}`,
+        title: `Открыт доступ к локации: ${location.rows[0].name}`,
         description: body.reason ?? null,
         locationId,
-        chatMessage: `GM grants access to location: ${location.rows[0].name}.`
+        chatMessage: `ГМ открыл доступ к локации: ${location.rows[0].name}.`
       });
 
       await client.query(
@@ -820,12 +820,12 @@ export async function locationsRoutes(app: FastifyInstance) {
         campaignId,
         userId: auth.user.user_id,
         eventType: "location_travel_approved",
-        title: `Travel approved: ${travelRequest.target_location_name}`,
+        title: `Переход одобрен: ${travelRequest.target_location_name}`,
         description: body.response ?? null,
         locationId: travelRequest.target_location_id,
         chatMessage:
           body.response ??
-          `GM approves travel to location: ${travelRequest.target_location_name}.`
+          `ГМ одобрил переход в локацию: ${travelRequest.target_location_name}.`
       });
 
       await client.query(

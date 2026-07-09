@@ -204,16 +204,18 @@ scene_seed AS (
         gm_description,
         sort_order,
         is_active,
-        visibility
+        visibility,
+        presentation_mode,
+        image_fit
     )
     VALUES
-        ((SELECT campaign_id FROM campaign_seed), (SELECT location_id FROM location_seed WHERE name = 'Баклунд'), 'Центральная площадь', 'city', 'Широкая площадь с мокрой брусчаткой, фонарями и редкими экипажами.', 'На крыше ратуши дежурит наблюдатель в сером плаще.', 1, TRUE, 'public'),
-        ((SELECT campaign_id FROM campaign_seed), (SELECT location_id FROM location_seed WHERE name = 'Баклунд'), 'Туманный переулок', 'street', 'Узкий проход между домами. Туман глушит шаги и голоса.', 'За мусорными ящиками спрятана метка серой маски.', 2, TRUE, 'party_only'),
-        ((SELECT campaign_id FROM campaign_seed), (SELECT location_id FROM location_seed WHERE name = 'Аптека Морриса'), 'Торговый зал', 'investigation', 'Дождь стучит по вывеске. Внутри горит жёлтая лампа.', 'Моррис держит письмо в нижнем ящике прилавка.', 1, TRUE, 'party_only'),
-        ((SELECT campaign_id FROM campaign_seed), (SELECT location_id FROM location_seed WHERE name = 'Аптека Морриса'), 'Склад', 'investigation', 'Тесная комната с ящиками трав, бутылками спирта и запасными вывесками.', 'За стеллажом есть свежие следы грязной обуви.', 2, TRUE, 'hidden_until_discovered'),
-        ((SELECT campaign_id FROM campaign_seed), (SELECT location_id FROM location_seed WHERE name = 'Аптека Морриса'), 'Тайная комната', 'secret', 'За фальшивой стеной скрыта холодная комната без окон.', 'На столе лежит рецепт зелья и список возможных жертв.', 3, TRUE, 'gm_only'),
-        ((SELECT campaign_id FROM campaign_seed), (SELECT location_id FROM location_seed WHERE name = 'Старая часовня'), 'Неф', 'chapel', 'Пыльные скамьи, заколоченные окна и слабый запах ладана.', 'Под третьей скамьёй спрятан медный ключ.', 1, TRUE, 'hidden_until_discovered'),
-        ((SELECT campaign_id FROM campaign_seed), (SELECT location_id FROM location_seed WHERE name = 'Старая часовня'), 'Подземелье', 'dungeon', 'Каменная лестница ведёт вниз, где воздух становится холоднее.', 'Внизу готовят ритуал для серых масок.', 2, TRUE, 'gm_only')
+        ((SELECT campaign_id FROM campaign_seed), (SELECT location_id FROM location_seed WHERE name = 'Баклунд'), 'Центральная площадь', 'city', 'Широкая площадь с мокрой брусчаткой, фонарями и редкими экипажами.', 'На крыше ратуши дежурит наблюдатель в сером плаще.', 1, TRUE, 'public', 'illustration', 'cover'),
+        ((SELECT campaign_id FROM campaign_seed), (SELECT location_id FROM location_seed WHERE name = 'Баклунд'), 'Туманный переулок', 'street', 'Узкий проход между домами. Туман глушит шаги и голоса.', 'За мусорными ящиками спрятана метка серой маски.', 2, TRUE, 'party_only', 'illustration', 'cover'),
+        ((SELECT campaign_id FROM campaign_seed), (SELECT location_id FROM location_seed WHERE name = 'Аптека Морриса'), 'Торговый зал', 'investigation', 'Дождь стучит по вывеске. Внутри горит жёлтая лампа.', 'Моррис держит письмо в нижнем ящике прилавка.', 1, TRUE, 'party_only', 'tactical_map', 'contain'),
+        ((SELECT campaign_id FROM campaign_seed), (SELECT location_id FROM location_seed WHERE name = 'Аптека Морриса'), 'Склад', 'investigation', 'Тесная комната с ящиками трав, бутылками спирта и запасными вывесками.', 'За стеллажом есть свежие следы грязной обуви.', 2, TRUE, 'hidden_until_discovered', 'tactical_map', 'contain'),
+        ((SELECT campaign_id FROM campaign_seed), (SELECT location_id FROM location_seed WHERE name = 'Аптека Морриса'), 'Тайная комната', 'secret', 'За фальшивой стеной скрыта холодная комната без окон.', 'На столе лежит рецепт зелья и список возможных жертв.', 3, TRUE, 'gm_only', 'illustration', 'cover'),
+        ((SELECT campaign_id FROM campaign_seed), (SELECT location_id FROM location_seed WHERE name = 'Старая часовня'), 'Неф', 'chapel', 'Пыльные скамьи, заколоченные окна и слабый запах ладана.', 'Под третьей скамьёй спрятан медный ключ.', 1, TRUE, 'hidden_until_discovered', 'illustration', 'cover'),
+        ((SELECT campaign_id FROM campaign_seed), (SELECT location_id FROM location_seed WHERE name = 'Старая часовня'), 'Подземелье', 'dungeon', 'Каменная лестница ведёт вниз, где воздух становится холоднее.', 'Внизу готовят ритуал для серых масок.', 2, TRUE, 'gm_only', 'tactical_map', 'contain')
     RETURNING scene_id, location_id, name
 ),
 active_scene_seed AS (
