@@ -63,6 +63,26 @@ pnpm start
 
 ## Endpoint-ы
 
+## Realtime WebSocket
+
+```text
+WS /ws/campaign/:campaignId
+```
+
+WebSocket использует ту же session cookie, что и REST API. Подключиться может только участник кампании.
+
+События:
+
+- `scene.changed`;
+- `token.created`;
+- `token.updated`;
+- `token.deleted`;
+- `player.moved`;
+- `chat.message.created`;
+- `dice.rolled`.
+
+Подробно: `docs/realtime.md`.
+
 ### POST `/api/auth/register`
 
 Создаёт пользователя, auth account, session и ставит httpOnly cookie.

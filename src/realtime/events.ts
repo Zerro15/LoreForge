@@ -1,0 +1,96 @@
+import { CurrentMemberPermissions } from "../domain/access/permissions";
+
+export type RealtimeEventType =
+  | "scene.changed"
+  | "token.created"
+  | "token.updated"
+  | "token.deleted"
+  | "player.moved"
+  | "chat.message.created"
+  | "dice.rolled";
+
+export type SceneChangedEvent = {
+  type: "scene.changed";
+  payload: {
+    campaignId: string;
+    sceneId: string;
+    locationId: string;
+    visibility?: string;
+  };
+};
+
+export type TokenEvent = {
+  type: "token.created" | "token.updated" | "token.deleted";
+  payload: {
+    campaignId: string;
+    tokenId: string;
+    sceneId: string;
+    x?: number | string;
+    y?: number | string;
+    visibility: "public" | "gm_only" | "hidden";
+  };
+};
+
+export type PlayerMovedEvent = {
+  type: "player.moved";
+  payload: {
+    campaignId: string;
+    userId: string;
+    characterId: string | null;
+    sceneId: string;
+    visibility?: string;
+  };
+};
+
+export type ChatMessageCreatedEvent = {
+  type: "chat.message.created";
+  payload: {
+    campaignId: string;
+    messageId: string;
+    visibility: string;
+  };
+};
+
+export type DiceRolledEvent = {
+  type: "dice.rolled";
+  payload: {
+    campaignId: string;
+    rollId: string;
+    messageId: string;
+    visibility: string;
+  };
+};
+
+export type RealtimeEvent =
+  | SceneChangedEvent
+  | TokenEvent
+  | PlayerMovedEvent
+  | ChatMessageCreatedEvent
+  | DiceRolledEvent;
+
+export function canReceiveRealtimeEvent(
+  permissions: CurrentMemberPermissions,
+  event: RealtimeEvent
+) {
+  if (permissions.canViewGMSecrets) {
+    return true;
+  }
+
+  if (event.type === "token.created" || event.type === "token.updated" || event.type === "token.deleted") {
+    return event.payload.visibility === "public";
+  }
+
+  if (event.type === "scene.changed" || event.type === "player.moved") {
+    if (permissions.role === "viewer") {
+      return event.payload.visibility === "public";
+    }
+
+    return event.payload.visibility === "public" || event.payload.visibility === "party_only";
+  }
+
+  if (event.type === "chat.message.created" || event.type === "dice.rolled") {
+    return event.payload.visibility === "public" || event.payload.visibility === "party_only";
+  }
+
+  return false;
+}

@@ -17,6 +17,7 @@ import { pluginsRoutes } from "./routes/plugins";
 import { scenesRoutes } from "./routes/scenes";
 import { sessionLogsRoutes } from "./routes/sessionLogs";
 import { tokensRoutes } from "./routes/tokens";
+import { registerRealtime } from "./realtime/websocket";
 
 const app = Fastify({
   logger: true
@@ -89,6 +90,8 @@ app.get("/health", async () => ({
   ok: true,
   service: "loreforge-api"
 }));
+
+registerRealtime(app);
 
 app.register(authRoutes);
 app.register(campaignsRoutes);

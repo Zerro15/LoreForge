@@ -504,6 +504,19 @@ export function getChat(campaignId: string) {
   return requestApi<ChatMessage[]>(`/api/campaigns/${campaignId}/chat`);
 }
 
+export function sendChatMessage(
+  campaignId: string,
+  body: { content: string; visibility?: "public" | "party_only" }
+) {
+  return requestApi<ChatMessage>(`/api/campaigns/${campaignId}/chat`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+}
+
 export function getSessionLog(campaignId: string) {
   return requestApi<SessionLog[]>(`/api/campaigns/${campaignId}/session-log`);
 }

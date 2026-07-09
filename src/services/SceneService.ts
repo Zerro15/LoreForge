@@ -12,9 +12,10 @@ export class SceneService {
       scene_id: number;
       location_id: number;
       name: string;
+      visibility: string;
     }>(
       `
-      SELECT scene_id, location_id, name
+      SELECT scene_id, location_id, name, visibility
       FROM scene
       WHERE campaign_id = $1
         AND scene_id = $2
@@ -92,12 +93,14 @@ export class SceneService {
       location_id: number;
       name: string;
       location_name: string;
+      visibility: string;
     }>(
       `
       SELECT
         s.scene_id,
         s.location_id,
         s.name,
+        s.visibility,
         l.name AS location_name
       FROM scene s
       JOIN location l ON l.location_id = s.location_id

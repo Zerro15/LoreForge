@@ -156,6 +156,26 @@ UI учитывает флаги:
 
 UI labels для `visibility` и `status` берутся из `lib/ui-labels.ts`. Raw enum значения в интерфейсе выводить нельзя.
 
+## Realtime
+
+Play Room подключается к WebSocket через `RealtimeProvider`.
+
+Env:
+
+```env
+NEXT_PUBLIC_WS_URL=ws://localhost:3001
+```
+
+Когда приходят события `scene.changed`, `token.created`, `token.updated`, `token.deleted`, `player.moved`, `chat.message.created` или `dice.rolled`, frontend обновляет данные через REST API. Это сохраняет REST как источник истины и даёт live updates без сложного client-side cache.
+
+В интерфейсе Play Room показывается статус:
+
+- `Подключено`;
+- `Подключение...`;
+- `Нет соединения`.
+
+Подробнее: `docs/realtime.md`.
+
 ## UI labels
 
 Backend enums и API contracts остаются на английском, но пользовательский интерфейс показывает русские подписи через `lib/ui-labels.ts`.
@@ -219,5 +239,6 @@ Frontend показывает аккуратное error/empty состояни�
 - OAuth-кнопки Discord и Google декоративные;
 - базовый roles/access control реализован на backend и учитывается в UI;
 - visibility для локаций учитывает роль пользователя и `player_location_access`;
-- регистрации, оплаты, marketplace, WebSocket, карты и drag-and-drop пока нет;
+- полноценного combat, fog of war, marketplace, оплаты и WebSocket-чата с постоянной историей соединений пока нет;
+- VTT-карта, сцены, токены и базовый realtime уже реализованы как фундамент Play Room;
 - `SecretBlock` отображается только если backend вернул секретные поля.

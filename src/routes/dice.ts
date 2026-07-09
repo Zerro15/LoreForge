@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { canRollDice, getCampaignAccess } from "../access/campaignAccess";
 import { queryOne, withTransaction } from "../db";
+import { realtimeRooms } from "../realtime/rooms";
 
 const campaignParamsSchema = z.object({
   campaignId: z.coerce.number().int().positive()
@@ -205,6 +206,25 @@ export async function diceRoutes(app: FastifyInstance) {
         roll: roll.rows[0],
         message: message.rows[0]
       };
+    });
+
+    realtimeRooms.broadcast(campaignId, {
+      type: "dice.rolled",
+      payload: {
+        campaignId: String(campaignId),
+        rollId: String(inserted.roll.roll_id),
+        messageId: String(inserted.message.message_id),
+        visibility: inserted.roll.visibility as string
+      }
+    });
+
+    realtimeRooms.broadcast(campaignId, {
+      type: "chat.message.created",
+      payload: {
+        campaignId: String(campaignId),
+        messageId: String(inserted.message.message_id),
+        visibility: inserted.message.visibility as string
+      }
     });
 
     return inserted;
