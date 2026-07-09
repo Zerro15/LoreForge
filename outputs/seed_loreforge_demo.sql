@@ -190,7 +190,7 @@ location_seed AS (
 ),
 active_location_seed AS (
     UPDATE campaign
-    SET active_location_id = (SELECT location_id FROM location_seed WHERE name = 'Восточный район')
+    SET active_location_id = (SELECT location_id FROM location_seed WHERE name = 'Аптека Морриса')
     WHERE campaign_id = (SELECT campaign_id FROM campaign_seed)
     RETURNING active_location_id
 ),
@@ -203,18 +203,57 @@ scene_seed AS (
         public_description,
         gm_description,
         sort_order,
-        is_active
+        is_active,
+        visibility
     )
-    VALUES (
-        (SELECT campaign_id FROM campaign_seed),
-        (SELECT location_id FROM location_seed WHERE name = 'Аптека Морриса'),
-        'Аптека Морриса — вечер',
-        'investigation',
-        'Дождь стучит по вывеске. Внутри горит жёлтая лампа.',
-        'Моррис держит письмо в нижнем ящике прилавка.',
-        1,
-        TRUE
+    VALUES
+        ((SELECT campaign_id FROM campaign_seed), (SELECT location_id FROM location_seed WHERE name = 'Баклунд'), 'Центральная площадь', 'city', 'Широкая площадь с мокрой брусчаткой, фонарями и редкими экипажами.', 'На крыше ратуши дежурит наблюдатель в сером плаще.', 1, TRUE, 'public'),
+        ((SELECT campaign_id FROM campaign_seed), (SELECT location_id FROM location_seed WHERE name = 'Баклунд'), 'Туманный переулок', 'street', 'Узкий проход между домами. Туман глушит шаги и голоса.', 'За мусорными ящиками спрятана метка серой маски.', 2, TRUE, 'party_only'),
+        ((SELECT campaign_id FROM campaign_seed), (SELECT location_id FROM location_seed WHERE name = 'Аптека Морриса'), 'Торговый зал', 'investigation', 'Дождь стучит по вывеске. Внутри горит жёлтая лампа.', 'Моррис держит письмо в нижнем ящике прилавка.', 1, TRUE, 'party_only'),
+        ((SELECT campaign_id FROM campaign_seed), (SELECT location_id FROM location_seed WHERE name = 'Аптека Морриса'), 'Склад', 'investigation', 'Тесная комната с ящиками трав, бутылками спирта и запасными вывесками.', 'За стеллажом есть свежие следы грязной обуви.', 2, TRUE, 'hidden_until_discovered'),
+        ((SELECT campaign_id FROM campaign_seed), (SELECT location_id FROM location_seed WHERE name = 'Аптека Морриса'), 'Тайная комната', 'secret', 'За фальшивой стеной скрыта холодная комната без окон.', 'На столе лежит рецепт зелья и список возможных жертв.', 3, TRUE, 'gm_only'),
+        ((SELECT campaign_id FROM campaign_seed), (SELECT location_id FROM location_seed WHERE name = 'Старая часовня'), 'Неф', 'chapel', 'Пыльные скамьи, заколоченные окна и слабый запах ладана.', 'Под третьей скамьёй спрятан медный ключ.', 1, TRUE, 'hidden_until_discovered'),
+        ((SELECT campaign_id FROM campaign_seed), (SELECT location_id FROM location_seed WHERE name = 'Старая часовня'), 'Подземелье', 'dungeon', 'Каменная лестница ведёт вниз, где воздух становится холоднее.', 'Внизу готовят ритуал для серых масок.', 2, TRUE, 'gm_only')
+    RETURNING scene_id, location_id, name
+),
+active_scene_seed AS (
+    UPDATE campaign
+    SET active_scene_id = (SELECT scene_id FROM scene_seed WHERE name = 'Торговый зал')
+    WHERE campaign_id = (SELECT campaign_id FROM campaign_seed)
+    RETURNING active_scene_id
+),
+member_scene_state_seed AS (
+    UPDATE campaign_member
+    SET current_location_id = (SELECT location_id FROM location_seed WHERE name = 'Аптека Морриса'),
+        current_scene_id = (SELECT scene_id FROM scene_seed WHERE name = 'Торговый зал')
+    WHERE campaign_id = (SELECT campaign_id FROM campaign_seed)
+      AND user_id IN (
+          SELECT user_id FROM users_seed WHERE username IN ('dima', 'alice')
+      )
+    RETURNING user_id
+),
+scene_player_state_seed AS (
+    INSERT INTO scene_player_state (
+        scene_id,
+        user_id,
+        familiarity_state,
+        first_seen_at,
+        last_seen_at,
+        note
     )
+    SELECT
+        scene.scene_id,
+        users_seed.user_id,
+        'known',
+        NOW(),
+        NOW(),
+        'Стартовая сцена демо-кампании.'
+    FROM users_seed
+    CROSS JOIN LATERAL (
+        SELECT scene_id FROM scene_seed WHERE name = 'Торговый зал'
+    ) scene
+    WHERE users_seed.username IN ('dima', 'alice')
+    ON CONFLICT (scene_id, user_id) DO NOTHING
     RETURNING scene_id
 ),
 group_seed AS (
@@ -252,8 +291,8 @@ character_seed AS (
         (
             (SELECT campaign_id FROM campaign_seed),
             (SELECT user_id FROM users_seed WHERE username = 'dima'),
-            (SELECT location_id FROM location_seed WHERE name = 'Восточный район'),
-            (SELECT scene_id FROM scene_seed),
+            (SELECT location_id FROM location_seed WHERE name = 'Аптека Морриса'),
+            (SELECT scene_id FROM scene_seed WHERE name = 'Торговый зал'),
             'Артур Вейн',
             'Мелкий частный сыщик. Слишком часто видит то, чего не должен видеть.',
             'Путь: Провидец. Последовательность: 9.',
@@ -263,8 +302,8 @@ character_seed AS (
         (
             (SELECT campaign_id FROM campaign_seed),
             (SELECT user_id FROM users_seed WHERE username = 'alice'),
-            (SELECT location_id FROM location_seed WHERE name = 'Восточный район'),
-            (SELECT scene_id FROM scene_seed),
+            (SELECT location_id FROM location_seed WHERE name = 'Аптека Морриса'),
+            (SELECT scene_id FROM scene_seed WHERE name = 'Торговый зал'),
             'Элиза Морроу',
             'Карманница из Восточного района. Умеет исчезать из чужого внимания.',
             'Путь: Мародёр. Последовательность: 9.',
@@ -495,7 +534,7 @@ chat_seed AS (
     INSERT INTO campaign_chat (campaign_id, scene_id, name, chat_type)
     VALUES (
         (SELECT campaign_id FROM campaign_seed),
-        (SELECT scene_id FROM scene_seed),
+        (SELECT scene_id FROM scene_seed WHERE name = 'Торговый зал'),
         'Сессия 1 — аптека Морриса',
         'session'
     )
@@ -521,7 +560,7 @@ dice_roll_seed AS (
         (
             (SELECT campaign_id FROM campaign_seed),
             (SELECT chat_id FROM chat_seed),
-            (SELECT scene_id FROM scene_seed),
+            (SELECT scene_id FROM scene_seed WHERE name = 'Торговый зал'),
             (SELECT user_id FROM users_seed WHERE username = 'dima'),
             (SELECT character_id FROM character_seed WHERE name = 'Артур Вейн'),
             'Осмотр следов у задней двери.',
@@ -536,7 +575,7 @@ dice_roll_seed AS (
         (
             (SELECT campaign_id FROM campaign_seed),
             (SELECT chat_id FROM chat_seed),
-            (SELECT scene_id FROM scene_seed),
+            (SELECT scene_id FROM scene_seed WHERE name = 'Торговый зал'),
             (SELECT user_id FROM users_seed WHERE username = 'alice'),
             (SELECT character_id FROM character_seed WHERE name = 'Элиза Морроу'),
             'Проверка странного осадка.',
@@ -609,7 +648,57 @@ SELECT
     (SELECT COUNT(*) FROM npc_seed) AS npcs_created,
     (SELECT COUNT(*) FROM item_seed) AS items_created,
     (SELECT COUNT(*) FROM location_seed) AS locations_created,
+    (SELECT COUNT(*) FROM scene_seed) AS scenes_created,
     (SELECT COUNT(*) FROM session_event_seed) AS session_events_created,
     (SELECT COUNT(*) FROM chat_message_seed) AS chat_messages_created;
+
+UPDATE campaign c
+SET active_location_id = l.location_id,
+    active_scene_id = s.scene_id,
+    updated_at = NOW()
+FROM scene s
+JOIN location l ON l.location_id = s.location_id
+WHERE c.campaign_id = s.campaign_id
+  AND c.name = 'Туман над Баклундом'
+  AND s.name = 'Торговый зал';
+
+UPDATE campaign_member cm
+SET current_location_id = l.location_id,
+    current_scene_id = s.scene_id,
+    updated_at = NOW()
+FROM campaign c
+JOIN scene s ON s.campaign_id = c.campaign_id
+JOIN location l ON l.location_id = s.location_id
+JOIN app_user u ON TRUE
+WHERE cm.campaign_id = c.campaign_id
+  AND u.user_id = cm.user_id
+  AND c.name = 'Туман над Баклундом'
+  AND s.name = 'Торговый зал'
+  AND u.username IN ('dima', 'alice', 'test_player');
+
+INSERT INTO scene_player_state (
+    scene_id,
+    user_id,
+    familiarity_state,
+    first_seen_at,
+    last_seen_at,
+    note
+)
+SELECT
+    s.scene_id,
+    u.user_id,
+    'known',
+    NOW(),
+    NOW(),
+    'Стартовая сцена демо-кампании.'
+FROM campaign c
+JOIN scene s ON s.campaign_id = c.campaign_id
+JOIN app_user u ON u.username IN ('dima', 'alice', 'test_player')
+WHERE c.name = 'Туман над Баклундом'
+  AND s.name = 'Торговый зал'
+ON CONFLICT (scene_id, user_id) DO UPDATE SET
+    familiarity_state = 'known',
+    last_seen_at = NOW(),
+    updated_at = NOW();
 
 COMMIT;
