@@ -34,9 +34,13 @@ import {
   getLocations,
   getScenes,
   getSceneTokens,
+  getSceneVisibility,
   grantLocationAccess,
+  hideSceneArea,
   movePlayerToScene,
   rejectGmRequest,
+  revealAllScene,
+  revealSceneArea,
   revokeLocationAccess,
   sendChatMessage,
   updateLocation,
@@ -55,7 +59,9 @@ import type {
   Location,
   Scene,
   SceneToken,
+  SceneVisibilityState,
   TokenVisibility,
+  VisionArea,
   Visibility
 } from "@/lib/types";
 import {
@@ -77,6 +83,7 @@ type PlayRoomState = {
   locations: Location[];
   scenes: Scene[];
   tokens: SceneToken[];
+  vision: SceneVisibilityState | null;
   characters: Character[];
   messages: ChatMessageType[];
   gmRequests: GMRequest[];
@@ -97,6 +104,8 @@ const tokenVisibilityLabels: Record<TokenVisibility, string> = {
   gm_only: "Только ГМ",
   hidden: "Скрыто"
 };
+
+type PlaySidePanel = "chat" | "dice" | "requests";
 
 function resolveAssetUrl(url?: string | null) {
   if (!url) {
@@ -204,20 +213,26 @@ export function SceneImageCard({
   location,
   isGm,
   tokens,
+  vision,
+  members,
   campaignId,
-  onTokensChanged
+  onTokensChanged,
+  onVisionChanged
 }: {
   scene: Scene | null;
   location: Location | null;
   isGm: boolean;
   tokens: SceneToken[];
+  vision: SceneVisibilityState | null;
+  members: Dashboard["members"];
   campaignId: string;
   onTokensChanged: () => void;
+  onVisionChanged: () => void;
 }) {
   const imageUrl = resolveAssetUrl(scene?.image?.attachment?.public_url);
 
   return (
-    <div className="relative min-h-[620px] overflow-hidden rounded-3xl border border-[#273244]/90 bg-[#0B0F17]">
+    <div className="relative h-[calc(100vh-8.25rem)] min-h-[680px] overflow-hidden rounded-3xl border border-[#273244]/90 bg-[#0B0F17] xl:min-h-[760px]">
       {imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -231,13 +246,11 @@ export function SceneImageCard({
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:64px_64px]" />
       <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F17] via-[#0B0F17]/28 to-[#0B0F17]/10" />
 
+      <VisionLayer isGm={isGm} vision={vision} />
+
       {isGm ? (
-        <div className="absolute right-4 top-4 z-20 rounded-2xl border border-[#273244] bg-[#0B0F17]/80 p-3 text-xs text-[#c7ccd6] shadow-xl backdrop-blur">
-          <div className="mb-2 font-semibold text-[#F5F2EA]">NPC-инструменты</div>
-          <div className="space-y-1">
-            <div>Маркеры NPC: видны только ГМу</div>
-            <div>Токены и боёвка: позже</div>
-          </div>
+        <div className="absolute right-4 top-4 z-20 rounded-full border border-[#273244] bg-[#0B0F17]/80 px-3 py-1.5 text-xs text-[#c7ccd6] shadow-xl backdrop-blur">
+          NPC-инструменты · только ГМ
         </div>
       ) : null}
 
@@ -249,7 +262,16 @@ export function SceneImageCard({
         tokens={tokens}
       />
 
-      <div className="relative z-20 flex min-h-[620px] flex-col justify-end p-7">
+      {isGm ? (
+        <VisionManager
+          campaignId={campaignId}
+          members={members}
+          onChanged={onVisionChanged}
+          scene={scene}
+        />
+      ) : null}
+
+      <div className="relative z-20 flex h-full min-h-0 flex-col justify-end p-4 md:p-5">
         <div className="flex flex-wrap gap-2">
           <Badge tone="purple">Сцена</Badge>
           {scene?.is_current_for_user ? <Badge tone="green">Вы здесь</Badge> : null}
@@ -259,27 +281,227 @@ export function SceneImageCard({
             </Badge>
           ) : null}
         </div>
-        <p className="mt-4 text-sm text-[#9CA3AF]">
-          {location?.name ?? scene?.location?.name ?? "Локация не выбрана"}
-        </p>
-        <h2 className="mt-1 text-4xl font-semibold tracking-tight">
-          {scene?.name ?? "Сцена не выбрана"}
-        </h2>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-[#c7ccd6]">
-          {scene?.public_description ??
-            "Картинка сцены ещё не загружена. ГМ может добавить карту в управлении локациями."}
-        </p>
+        <div className="mt-3 max-w-3xl rounded-2xl border border-[#273244]/80 bg-[#0B0F17]/72 p-4 shadow-2xl backdrop-blur">
+          <p className="text-xs text-[#9CA3AF]">
+            {location?.name ?? scene?.location?.name ?? "Локация не выбрана"}
+          </p>
+          <h2 className="mt-1 text-2xl font-semibold tracking-tight md:text-3xl">
+            {scene?.name ?? "Сцена не выбрана"}
+          </h2>
+          <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#c7ccd6]">
+            {scene?.public_description ??
+              "Картинка сцены ещё не загружена. ГМ может добавить карту в управлении локациями."}
+          </p>
+        </div>
         {isGm && scene?.gm_description ? (
-          <div className="mt-4 max-w-3xl rounded-2xl border border-dashed border-[#D6A84F]/45 bg-[#D6A84F]/10 p-3 text-sm text-[#f0dca8]">
-            <div className="mb-1 flex items-center gap-2 font-semibold">
+          <details className="mt-2 max-w-3xl rounded-2xl border border-dashed border-[#D6A84F]/45 bg-[#0B0F17]/72 p-3 text-sm text-[#f0dca8] backdrop-blur">
+            <summary className="flex cursor-pointer items-center gap-2 font-semibold">
               <Lock size={14} />
               Секрет ГМа
-            </div>
-            {scene.gm_description}
-          </div>
+            </summary>
+            <p className="mt-2 text-sm leading-6">{scene.gm_description}</p>
+          </details>
         ) : null}
       </div>
     </div>
+  );
+}
+
+function getRectArea(area: VisionArea) {
+  if (area.type === "rect" || area.x !== undefined) {
+    return {
+      x: area.x ?? 0,
+      y: area.y ?? 0,
+      width: area.width ?? 30,
+      height: area.height ?? 30
+    };
+  }
+
+  const points = area.points ?? [];
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+
+  if (!xs.length || !ys.length) {
+    return null;
+  }
+
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const maxX = Math.max(...xs);
+  const maxY = Math.max(...ys);
+
+  return {
+    x: minX,
+    y: minY,
+    width: Math.max(4, maxX - minX),
+    height: Math.max(4, maxY - minY)
+  };
+}
+
+export function VisionLayer({
+  isGm,
+  vision
+}: {
+  isGm: boolean;
+  vision: SceneVisibilityState | null;
+}) {
+  const revealedAreas = vision?.revealed_data?.areas ?? [];
+  const hiddenAreas = vision?.revealed_data?.hiddenAreas ?? [];
+  const isFullMap = isGm || vision?.revealed_data?.mode === "all";
+
+  if (!vision) {
+    return null;
+  }
+
+  if (isFullMap) {
+    return (
+      <div className="pointer-events-none absolute inset-0 z-[6]">
+        {isGm ? (
+          <div className="absolute left-4 bottom-4 rounded-full border border-[#4FAF7A]/35 bg-[#0B0F17]/70 px-3 py-1 text-xs text-[#b6f4d0] backdrop-blur">
+            Полный обзор ГМа
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-[6] overflow-hidden">
+      <div className="absolute inset-0 bg-[#02040A]/72 backdrop-blur-[1px]" />
+      {revealedAreas.map((area, index) => {
+        const rect = getRectArea(area);
+
+        if (!rect) {
+          return null;
+        }
+
+        return (
+          <div
+            className="absolute rounded-2xl border border-[#A78BFA]/45 bg-[#F5F2EA]/10 shadow-[0_0_70px_rgba(167,139,250,0.35)]"
+            key={`revealed-${index}`}
+            style={{
+              height: `${rect.height}%`,
+              left: `${rect.x}%`,
+              top: `${rect.y}%`,
+              width: `${rect.width}%`
+            }}
+          />
+        );
+      })}
+      {hiddenAreas.map((area, index) => {
+        const rect = getRectArea(area);
+
+        if (!rect) {
+          return null;
+        }
+
+        return (
+          <div
+            className="absolute rounded-2xl border border-[#B84A4A]/35 bg-[#02040A]/80"
+            key={`hidden-${index}`}
+            style={{
+              height: `${rect.height}%`,
+              left: `${rect.x}%`,
+              top: `${rect.y}%`,
+              width: `${rect.width}%`
+            }}
+          />
+        );
+      })}
+      {!revealedAreas.length ? (
+        <div className="absolute inset-0 flex items-center justify-center text-sm text-[#9CA3AF]">
+          Карта пока скрыта туманом войны
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function VisionManager({
+  campaignId,
+  scene,
+  members,
+  onChanged
+}: {
+  campaignId: string;
+  scene: Scene | null;
+  members: Dashboard["members"];
+  onChanged: () => void;
+}) {
+  const playerMembers = members.filter((member) => member.role === "player");
+  const [targetUserId, setTargetUserId] = useState(playerMembers[0]?.user_id ?? "");
+  const [error, setError] = useState<string | null>(null);
+
+  const defaultArea: VisionArea = {
+    type: "rect",
+    x: 18,
+    y: 18,
+    width: 34,
+    height: 34
+  };
+
+  async function run(action: "reveal" | "revealAll" | "hide") {
+    if (!scene || !targetUserId) {
+      return;
+    }
+
+    const userId = Number(targetUserId);
+    const result =
+      action === "reveal"
+        ? await revealSceneArea(campaignId, scene.scene_id, {
+            userId,
+            area: defaultArea
+          })
+        : action === "revealAll"
+          ? await revealAllScene(campaignId, scene.scene_id, { userId })
+          : await hideSceneArea(campaignId, scene.scene_id, {
+              userId,
+              area: { type: "rect", x: 46, y: 46, width: 28, height: 28 }
+            });
+
+    setError(result.error);
+    if (!result.error) {
+      onChanged();
+    }
+  }
+
+  if (!scene || !playerMembers.length) {
+    return null;
+  }
+
+  return (
+    <details className="absolute left-4 top-16 z-20 w-52 rounded-2xl border border-[#273244] bg-[#0B0F17]/82 p-2 shadow-xl backdrop-blur open:w-64">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-2 py-1.5 text-sm font-semibold">
+        <span>Туман</span>
+        <EyeOff size={15} className="text-[#A78BFA]" />
+      </summary>
+      <div className="mt-2 grid max-h-[340px] gap-2 overflow-y-auto px-1 pb-1">
+        <select
+          className="h-10 rounded-xl border border-[#273244] bg-[#0B0F17] px-3 text-sm"
+          onChange={(event) => setTargetUserId(event.target.value)}
+          value={targetUserId}
+        >
+          {playerMembers.map((member) => (
+            <option key={member.user_id} value={member.user_id}>
+              {member.display_name}
+            </option>
+          ))}
+        </select>
+        <Button onClick={() => void run("reveal")} type="button" variant="secondary">
+          <Eye size={14} />
+          Открыть область
+        </Button>
+        <Button onClick={() => void run("revealAll")} type="button">
+          <Eye size={14} />
+          Открыть всю карту
+        </Button>
+        <Button onClick={() => void run("hide")} type="button" variant="secondary">
+          <EyeOff size={14} />
+          Скрыть область
+        </Button>
+        {error ? <p className="text-xs text-[#e89a9a]">{error}</p> : null}
+      </div>
+    </details>
   );
 }
 
@@ -447,9 +669,12 @@ export function TokenLayer({
       })}
 
       {isGm && scene ? (
-        <div className="absolute left-4 top-4 w-64 rounded-2xl border border-[#273244] bg-[#0B0F17]/82 p-3 shadow-xl backdrop-blur">
-          <div className="mb-2 text-sm font-semibold">Объекты карты</div>
-          <div className="grid gap-2">
+        <details className="absolute left-4 top-4 w-52 rounded-2xl border border-[#273244] bg-[#0B0F17]/82 p-2 shadow-xl backdrop-blur open:w-64">
+          <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl px-2 py-1.5 text-sm font-semibold">
+            <span>Объекты</span>
+            <Plus size={15} className="text-[#A78BFA]" />
+          </summary>
+          <div className="mt-2 grid max-h-[340px] gap-2 overflow-y-auto px-1 pb-1">
             <Input
               onChange={(event) => setLabel(event.target.value)}
               placeholder="Название объекта"
@@ -472,7 +697,7 @@ export function TokenLayer({
             </Button>
             {error ? <p className="text-xs text-[#e89a9a]">{error}</p> : null}
           </div>
-        </div>
+        </details>
       ) : null}
     </div>
   );
@@ -1362,6 +1587,7 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
     locations: [],
     scenes: [],
     tokens: [],
+    vision: null,
     characters: [],
     messages: [],
     gmRequests: [],
@@ -1372,6 +1598,7 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
   const [managerOpen, setManagerOpen] = useState(false);
   const [travelOpen, setTravelOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
+  const [sidePanel, setSidePanel] = useState<PlaySidePanel>("chat");
 
   const permissions = state.dashboard?.currentMember ?? null;
   const role = permissions?.role ?? getCurrentRole(state);
@@ -1433,6 +1660,7 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
       locations: locations.data ?? [],
       scenes: scenes.data ?? [],
       tokens: [],
+      vision: null,
       characters: characters.data ?? [],
       messages: messages.data ?? [],
       gmRequests: []
@@ -1445,13 +1673,18 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
       null;
 
     if (nextActiveScene) {
-      const tokens = await getSceneTokens(campaignId, nextActiveScene.scene_id);
-      if (tokens.error) {
-        setError(tokens.error);
+      const [tokens, vision] = await Promise.all([
+        getSceneTokens(campaignId, nextActiveScene.scene_id),
+        getSceneVisibility(campaignId, nextActiveScene.scene_id)
+      ]);
+      const sceneError = tokens.error ?? vision.error;
+      if (sceneError) {
+        setError(sceneError);
         setLoading(false);
         return;
       }
       nextState.tokens = tokens.data ?? [];
+      nextState.vision = vision.data;
     }
 
     if (dashboard.data?.currentMember.canApproveGMRequests) {
@@ -1476,6 +1709,7 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
         event.type === "token.created" ||
         event.type === "token.updated" ||
         event.type === "token.deleted" ||
+        event.type === "vision.updated" ||
         event.type === "chat.message.created" ||
         event.type === "dice.rolled"
       ) {
@@ -1525,13 +1759,19 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
   return (
     <RealtimeProvider campaignId={campaignId} onEvent={handleRealtimeEvent}>
       {(realtimeStatus) => (
-    <div className="space-y-4">
-      <div className="flex justify-end">
+    <div className="space-y-3 overflow-x-hidden">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="truncate text-sm text-[#9CA3AF]">
+            {dashboard.campaign.title} · {dashboard.campaign.setting_name ?? "Core"} ·{" "}
+            {getLabel(roleLabels, role, "Наблюдатель")}
+          </div>
+        </div>
         <Badge
           tone={
             realtimeStatus === "connected"
               ? "green"
-              : realtimeStatus === "connecting"
+              : realtimeStatus === "connecting" || realtimeStatus === "reconnecting"
                 ? "gold"
                 : "danger"
           }
@@ -1541,48 +1781,25 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
             ? "Подключено"
             : realtimeStatus === "connecting"
               ? "Подключение..."
+              : realtimeStatus === "reconnecting"
+                ? "Переподключение..."
               : "Нет соединения"}
         </Badge>
       </div>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-4">
-          <Card className="overflow-hidden p-3">
+      <div className="grid min-h-[calc(100vh-7.5rem)] gap-3 xl:grid-cols-[minmax(0,1fr)_320px] 2xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-3">
+          <Card className="overflow-hidden p-1.5">
             <SceneImageCard
               campaignId={campaignId}
               isGm={isGm}
               location={sceneLocation}
+              members={dashboard.members}
               onTokensChanged={() => void loadData()}
+              onVisionChanged={() => void loadData()}
               scene={activeScene}
               tokens={state.tokens}
+              vision={state.vision}
             />
-            <div className="mt-4 flex flex-col justify-between gap-3 px-2 pb-2 md:flex-row md:items-center">
-              <div>
-                <div className="text-sm text-[#9CA3AF]">
-                  Мир: {dashboard.campaign.setting_name ?? "Core"} · Роль:{" "}
-                  {getLabel(roleLabels, role, "Наблюдатель")}
-                </div>
-                <h2 className="mt-1 text-xl font-semibold">
-                  {dashboard.campaign.title}
-                </h2>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {permissions?.canManageLocations ? (
-                  <Button onClick={() => setManagerOpen(true)} type="button">
-                    <MapPinned size={16} />
-                    Управление сценами
-                  </Button>
-                ) : permissions?.canCreateTravelRequest ? (
-                  <Button onClick={() => setTravelOpen(true)} type="button">
-                    <Send size={16} />
-                    Запросить переход
-                  </Button>
-                ) : null}
-                <Button onClick={() => void loadData()} type="button" variant="secondary">
-                  <RefreshCw size={16} />
-                  Обновить
-                </Button>
-              </div>
-            </div>
           </Card>
 
           <div className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
@@ -1651,19 +1868,36 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
               </div>
           </Card>
 
-          {permissions?.canApproveGMRequests ? (
-            <GMRequestsPanel
-              campaignId={campaignId}
-              onResolved={() => void loadData()}
-              requests={state.gmRequests}
-            />
-          ) : null}
         </div>
 
-        <aside className="space-y-4">
-          <Card className="p-4">
-            <h3 className="mb-3 font-semibold">Чат кампании</h3>
-            <div className="max-h-[520px] space-y-3 overflow-y-auto pr-1">
+        <aside className="min-w-0 space-y-3 xl:sticky xl:top-2 xl:max-h-[calc(100vh-1rem)]">
+          <Card className="p-3">
+            <div className="grid grid-cols-3 gap-1 rounded-2xl border border-[#273244] bg-[#0B0F17]/70 p-1">
+              {([
+                ["chat", "Чат"],
+                ["dice", "Кубики"],
+                ["requests", "Запросы"]
+              ] as Array<[PlaySidePanel, string]>).map(([value, label]) => (
+                <button
+                  className={`rounded-xl px-2 py-2 text-xs font-semibold transition ${
+                    sidePanel === value
+                      ? "bg-[#8B5CF6] text-white"
+                      : "text-[#9CA3AF] hover:bg-[#171A26] hover:text-[#F5F2EA]"
+                  }`}
+                  key={value}
+                  onClick={() => setSidePanel(value)}
+                  type="button"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </Card>
+
+          {sidePanel === "chat" ? (
+          <Card className="p-3">
+            <h3 className="mb-2 text-sm font-semibold">Чат кампании</h3>
+            <div className="max-h-[calc(100vh-18rem)] min-h-[360px] space-y-3 overflow-y-auto pr-1">
               {state.messages.slice(0, 8).map((message) => (
                 <ChatMessage key={message.message_id} message={message} />
               ))}
@@ -1684,6 +1918,9 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
               </form>
             ) : null}
           </Card>
+          ) : null}
+
+          {sidePanel === "dice" ? (
           <DiceQuickRolls
             campaignId={campaignId}
             disabledMessage={
@@ -1693,6 +1930,44 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
             }
             onRolled={() => void loadData()}
           />
+          ) : null}
+
+          {sidePanel === "requests" ? (
+            permissions?.canApproveGMRequests ? (
+              <GMRequestsPanel
+                campaignId={campaignId}
+                onResolved={() => void loadData()}
+                requests={state.gmRequests}
+              />
+            ) : (
+              <Card className="p-4">
+                <h3 className="font-semibold">Запросы игроков</h3>
+                <p className="mt-2 text-sm text-[#9CA3AF]">
+                  Запросы переходов доступны только ГМу.
+                </p>
+              </Card>
+            )
+          ) : null}
+
+          <Card className="p-3">
+            <div className="grid gap-2">
+              {permissions?.canManageLocations ? (
+                <Button onClick={() => setManagerOpen(true)} type="button">
+                  <MapPinned size={16} />
+                  Управление сценами
+                </Button>
+              ) : permissions?.canCreateTravelRequest ? (
+                <Button onClick={() => setTravelOpen(true)} type="button">
+                  <Send size={16} />
+                  Запросить переход
+                </Button>
+              ) : null}
+              <Button onClick={() => void loadData()} type="button" variant="secondary">
+                <RefreshCw size={16} />
+                Обновить
+              </Button>
+            </div>
+          </Card>
         </aside>
       </div>
 

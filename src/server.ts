@@ -17,6 +17,7 @@ import { pluginsRoutes } from "./routes/plugins";
 import { scenesRoutes } from "./routes/scenes";
 import { sessionLogsRoutes } from "./routes/sessionLogs";
 import { tokensRoutes } from "./routes/tokens";
+import { visionRoutes } from "./routes/vision";
 import { registerRealtime } from "./realtime/websocket";
 
 const app = Fastify({
@@ -105,6 +106,7 @@ app.register(pluginsRoutes);
 app.register(scenesRoutes);
 app.register(sessionLogsRoutes);
 app.register(tokensRoutes);
+app.register(visionRoutes);
 
 async function start() {
   const port = Number(process.env.PORT ?? 3001);

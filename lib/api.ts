@@ -9,9 +9,11 @@ import type {
   Npc,
   Scene,
   SceneToken,
+  SceneVisibilityState,
   SessionLog,
   TokenVisibility,
   Tag,
+  VisionArea,
   Visibility,
   WorldPlugin
 } from "./types";
@@ -462,6 +464,63 @@ export function archiveSceneToken(campaignId: string, tokenId: string) {
     `/api/campaigns/${campaignId}/tokens/${tokenId}`,
     {
       method: "DELETE"
+    }
+  );
+}
+
+export function getSceneVisibility(campaignId: string, sceneId: string) {
+  return requestApi<SceneVisibilityState>(
+    `/api/campaigns/${campaignId}/scenes/${sceneId}/visibility`
+  );
+}
+
+export function revealSceneArea(
+  campaignId: string,
+  sceneId: string,
+  body: { userId: number; area: VisionArea }
+) {
+  return requestApi<{ ok: true; visibility: unknown }>(
+    `/api/campaigns/${campaignId}/scenes/${sceneId}/reveal`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(body)
+    }
+  );
+}
+
+export function revealAllScene(
+  campaignId: string,
+  sceneId: string,
+  body: { userId: number }
+) {
+  return requestApi<{ ok: true; visibility: unknown }>(
+    `/api/campaigns/${campaignId}/scenes/${sceneId}/reveal-all`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(body)
+    }
+  );
+}
+
+export function hideSceneArea(
+  campaignId: string,
+  sceneId: string,
+  body: { userId?: number | null; area: VisionArea }
+) {
+  return requestApi<{ ok: true; visibility: unknown }>(
+    `/api/campaigns/${campaignId}/scenes/${sceneId}/hide-area`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(body)
     }
   );
 }

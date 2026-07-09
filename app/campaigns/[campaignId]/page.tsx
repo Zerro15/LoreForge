@@ -15,6 +15,7 @@ export default async function CampaignPlayRoomPage({
       campaignId={campaignId}
       title="Игровая комната"
       subtitle="Активная локация, чат, кубики и запросы переходов в одном экране."
+      variant="play"
     >
       <GameWorkspace campaignId={campaignId} />
     </AppShell>

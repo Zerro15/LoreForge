@@ -84,6 +84,7 @@ http://localhost:3000/campaigns/1/session-log
 - у кампании есть активная локация и активная сцена;
 - у участника кампании хранится текущая локация и текущая сцена.
 - поверх карты сцены отображается слой `TokenLayer` с объектами карты.
+- между картой и токенами работает `VisionLayer` для Fog of War.
 
 ГМ может:
 
@@ -100,6 +101,9 @@ http://localhost:3000/campaigns/1/session-log
 - перетащить токен мышью;
 - изменить видимость токена;
 - архивировать токен;
+- открыть область карты конкретному игроку;
+- открыть всю карту игроку;
+- скрыть область карты;
 - открыть или скрыть доступ конкретному игроку;
 - одобрить или отклонить запрос перехода.
 
@@ -107,6 +111,7 @@ http://localhost:3000/campaigns/1/session-log
 
 - видеть только доступные ему локации;
 - видеть текущую сцену и доступные сцены;
+- видеть только открытую ему часть карты;
 - видеть public-токены карты;
 - отправить запрос перехода ГМу;
 - увидеть результат через обновление данных, чат и журнал.
@@ -115,6 +120,7 @@ Viewer видит только public-сцены и public-токены, не п
 
 Подробнее: `docs/location-workflow.md`.
 Слой токенов описан в `docs/tokens.md`.
+Fog of War описан в `docs/fog-of-war.md`.
 
 ## Roles & Access UI
 
@@ -166,7 +172,7 @@ Env:
 NEXT_PUBLIC_WS_URL=ws://localhost:3001
 ```
 
-Когда приходят события `scene.changed`, `token.created`, `token.updated`, `token.deleted`, `player.moved`, `chat.message.created` или `dice.rolled`, frontend обновляет данные через REST API. Это сохраняет REST как источник истины и даёт live updates без сложного client-side cache.
+Когда приходят события `scene.changed`, `token.created`, `token.updated`, `token.deleted`, `player.moved`, `vision.updated`, `chat.message.created` или `dice.rolled`, frontend обновляет данные через REST API. Это сохраняет REST как источник истины и даёт live updates без сложного client-side cache.
 
 В интерфейсе Play Room показывается статус:
 

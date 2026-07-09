@@ -452,6 +452,54 @@ scene_token_seed AS (
         )
     RETURNING scene_token_id
 ),
+scene_visibility_layer_seed AS (
+    INSERT INTO scene_visibility_layer (
+        scene_id,
+        campaign_id,
+        type,
+        geometry_data,
+        visibility,
+        created_by_user_id
+    )
+    VALUES
+        (
+            (SELECT scene_id FROM scene_seed WHERE name = 'Торговый зал'),
+            (SELECT campaign_id FROM campaign_seed),
+            'fog',
+            '{"mode":"full"}'::JSONB,
+            'gm_only',
+            (SELECT user_id FROM users_seed WHERE username = 'admin_gm')
+        )
+    RETURNING scene_visibility_layer_id
+),
+player_scene_visibility_seed AS (
+    INSERT INTO player_scene_visibility (
+        campaign_id,
+        scene_id,
+        user_id,
+        revealed_data
+    )
+    VALUES
+        (
+            (SELECT campaign_id FROM campaign_seed),
+            (SELECT scene_id FROM scene_seed WHERE name = 'Торговый зал'),
+            (SELECT user_id FROM users_seed WHERE username = 'test_player'),
+            '{"mode":"partial","areas":[{"type":"rect","x":0,"y":0,"width":55,"height":55}]}'::JSONB
+        ),
+        (
+            (SELECT campaign_id FROM campaign_seed),
+            (SELECT scene_id FROM scene_seed WHERE name = 'Торговый зал'),
+            (SELECT user_id FROM users_seed WHERE username = 'dima'),
+            '{"mode":"partial","areas":[{"type":"rect","x":0,"y":0,"width":55,"height":55}]}'::JSONB
+        ),
+        (
+            (SELECT campaign_id FROM campaign_seed),
+            (SELECT scene_id FROM scene_seed WHERE name = 'Торговый зал'),
+            (SELECT user_id FROM users_seed WHERE username = 'alice'),
+            '{"mode":"partial","areas":[{"type":"rect","x":0,"y":0,"width":55,"height":55}]}'::JSONB
+        )
+    RETURNING player_scene_visibility_id
+),
 item_seed AS (
     INSERT INTO item (
         campaign_id,
@@ -726,6 +774,8 @@ SELECT
     (SELECT COUNT(*) FROM location_seed) AS locations_created,
     (SELECT COUNT(*) FROM scene_seed) AS scenes_created,
     (SELECT COUNT(*) FROM scene_token_seed) AS scene_tokens_created,
+    (SELECT COUNT(*) FROM scene_visibility_layer_seed) AS scene_visibility_layers_created,
+    (SELECT COUNT(*) FROM player_scene_visibility_seed) AS player_scene_visibility_created,
     (SELECT COUNT(*) FROM session_event_seed) AS session_events_created,
     (SELECT COUNT(*) FROM chat_message_seed) AS chat_messages_created;
 

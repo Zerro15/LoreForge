@@ -247,6 +247,44 @@ export type SceneToken = {
   image_attachment?: Attachment | null;
 };
 
+export type VisionArea = {
+  type?: "rect" | "polygon";
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  points?: Array<{
+    x: number;
+    y: number;
+  }>;
+};
+
+export type SceneVisibilityLayer = {
+  scene_visibility_layer_id: string;
+  scene_id: string;
+  campaign_id: string;
+  type: "fog" | "revealed_area" | "blocked_area";
+  geometry_data: unknown;
+  visibility: "public" | "gm_only";
+  created_by_user_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SceneVisibilityState = {
+  campaign_id: string;
+  scene_id: string;
+  viewer_user_id: string;
+  viewer_role: CampaignRole;
+  can_manage_vision: boolean;
+  revealed_data: {
+    mode?: "none" | "partial" | "all" | "public";
+    areas?: VisionArea[];
+    hiddenAreas?: VisionArea[];
+  };
+  layers: SceneVisibilityLayer[];
+};
+
 export type Attachment = {
   attachment_id: string;
   filename: string;

@@ -121,14 +121,18 @@ export async function chatRoutes(app: FastifyInstance) {
       return inserted.rows[0];
     });
 
-    realtimeRooms.broadcast(campaignId, {
-      type: "chat.message.created",
-      payload: {
-        campaignId: String(campaignId),
-        messageId: String(message.message_id),
-        visibility: message.visibility as string
-      }
-    });
+    realtimeRooms.broadcast(
+      campaignId,
+      {
+        type: "chat.message.created",
+        payload: {
+          campaignId: String(campaignId),
+          messageId: String(message.message_id),
+          visibility: message.visibility as string
+        }
+      },
+      request.log
+    );
 
     return reply.code(201).send(message);
   });

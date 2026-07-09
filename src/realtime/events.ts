@@ -6,8 +6,12 @@ export type RealtimeEventType =
   | "token.updated"
   | "token.deleted"
   | "player.moved"
+  | "vision.updated"
   | "chat.message.created"
-  | "dice.rolled";
+  | "dice.rolled"
+  | "realtime.ping"
+  | "realtime.pong"
+  | "realtime.connected";
 
 export type SceneChangedEvent = {
   type: "scene.changed";
@@ -61,19 +65,69 @@ export type DiceRolledEvent = {
   };
 };
 
+export type VisionUpdatedEvent = {
+  type: "vision.updated";
+  payload: {
+    campaignId: string;
+    sceneId: string;
+    userId: string;
+    visibilityData: unknown;
+  };
+};
+
+export type RealtimePingEvent = {
+  type: "realtime.ping";
+  payload: {
+    sentAt: string;
+  };
+};
+
+export type RealtimePongEvent = {
+  type: "realtime.pong";
+  payload: {
+    sentAt: string;
+  };
+};
+
+export type RealtimeConnectedEvent = {
+  type: "realtime.connected";
+  payload: {
+    campaignId: string;
+    room: string;
+    clients: number;
+  };
+};
+
 export type RealtimeEvent =
   | SceneChangedEvent
   | TokenEvent
   | PlayerMovedEvent
+  | VisionUpdatedEvent
   | ChatMessageCreatedEvent
-  | DiceRolledEvent;
+  | DiceRolledEvent
+  | RealtimePingEvent
+  | RealtimePongEvent
+  | RealtimeConnectedEvent;
 
 export function canReceiveRealtimeEvent(
   permissions: CurrentMemberPermissions,
-  event: RealtimeEvent
+  event: RealtimeEvent,
+  userId?: string | number
 ) {
   if (permissions.canViewGMSecrets) {
     return true;
+  }
+
+  if (
+    event.type === "realtime.ping" ||
+    event.type === "realtime.pong" ||
+    event.type === "realtime.connected"
+  ) {
+    return true;
+  }
+
+  if (event.type === "vision.updated") {
+    return String(event.payload.userId) === String(userId);
   }
 
   if (event.type === "token.created" || event.type === "token.updated" || event.type === "token.deleted") {
