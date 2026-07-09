@@ -3,7 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { WS_BASE_URL } from "./config";
 
-export type RealtimeStatus = "connecting" | "connected" | "disconnected";
+export type RealtimeStatus =
+  | "connecting"
+  | "connected"
+  | "reconnecting"
+  | "disconnected";
 
 export type RealtimeEvent =
   | {
@@ -51,6 +55,10 @@ export type RealtimeEvent =
   | {
       type: "realtime.connected";
       payload: { campaignId: string; room: string; clients: number };
+    }
+  | {
+      type: "realtime.ping" | "realtime.pong";
+      payload: { sentAt: string };
     };
 
 function resolveWebSocketUrl(campaignId: string) {
@@ -63,6 +71,44 @@ function resolveWebSocketUrl(campaignId: string) {
       : "");
 
   return `${base}/ws/campaign/${campaignId}`;
+}
+
+const MAX_RECONNECT_ATTEMPTS = 10;
+const HEARTBEAT_TIMEOUT_MS = 65_000;
+const HEARTBEAT_CHECK_MS = 10_000;
+
+function reconnectDelay(attempt: number) {
+  return Math.min(5000, Math.max(1000, attempt * 1000));
+}
+
+function isServiceEvent(event: RealtimeEvent) {
+  return (
+    event.type === "realtime.connected" ||
+    event.type === "realtime.ping" ||
+    event.type === "realtime.pong"
+  );
+}
+
+function isKnownRealtimeEvent(value: unknown): value is RealtimeEvent {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const type = (value as { type?: unknown }).type;
+
+  return (
+    type === "scene.changed" ||
+    type === "token.created" ||
+    type === "token.updated" ||
+    type === "token.deleted" ||
+    type === "player.moved" ||
+    type === "vision.updated" ||
+    type === "chat.message.created" ||
+    type === "dice.rolled" ||
+    type === "realtime.connected" ||
+    type === "realtime.ping" ||
+    type === "realtime.pong"
+  );
 }
 
 export function useCampaignRealtime(
@@ -83,37 +129,145 @@ export function useCampaignRealtime(
 
     let socket: WebSocket | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
     let closedByEffect = false;
+    let reconnectAttempt = 0;
+    let lastSeenAt = Date.now();
+    const url = resolveWebSocketUrl(campaignId);
+
+    function clearReconnectTimer() {
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
+    }
+
+    function clearHeartbeatTimer() {
+      if (heartbeatTimer) {
+        clearInterval(heartbeatTimer);
+        heartbeatTimer = null;
+      }
+    }
+
+    function closeSocket(code = 1000, reason = "Client cleanup") {
+      if (
+        socket &&
+        socket.readyState !== WebSocket.CLOSED &&
+        socket.readyState !== WebSocket.CLOSING
+      ) {
+        socket.close(code, reason);
+      }
+    }
+
+    function scheduleReconnect() {
+      if (closedByEffect || reconnectTimer) {
+        return;
+      }
+
+      reconnectAttempt += 1;
+
+      if (reconnectAttempt > MAX_RECONNECT_ATTEMPTS) {
+        console.warn("[realtime] reconnect attempts exhausted");
+        setStatus("disconnected");
+        return;
+      }
+
+      const delay = reconnectDelay(reconnectAttempt);
+      console.info("[realtime] reconnect in", delay);
+      setStatus("reconnecting");
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        connect();
+      }, delay);
+    }
+
+    function startHeartbeatWatchdog() {
+      clearHeartbeatTimer();
+      heartbeatTimer = setInterval(() => {
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+          return;
+        }
+
+        if (Date.now() - lastSeenAt > HEARTBEAT_TIMEOUT_MS) {
+          console.warn("[realtime] heartbeat timeout, reconnecting");
+          socket.close(4002, "Client heartbeat timeout");
+        }
+      }, HEARTBEAT_CHECK_MS);
+    }
 
     function connect() {
-      setStatus("connecting");
-      socket = new WebSocket(resolveWebSocketUrl(campaignId));
+      clearReconnectTimer();
+      clearHeartbeatTimer();
+      setStatus(reconnectAttempt > 0 ? "reconnecting" : "connecting");
+      console.info("[realtime] connecting", url);
+      socket = new WebSocket(url);
 
       socket.addEventListener("open", () => {
+        console.info("[realtime] open");
+        reconnectAttempt = 0;
+        lastSeenAt = Date.now();
         setStatus("connected");
+        startHeartbeatWatchdog();
       });
 
       socket.addEventListener("message", (message) => {
+        lastSeenAt = Date.now();
+
         if (message.data === "pong") {
           return;
         }
 
+        let event: unknown;
+
         try {
-          callbackRef.current(JSON.parse(String(message.data)) as RealtimeEvent);
-        } catch {
-          // Ignore malformed realtime messages; REST remains source of truth.
+          event = JSON.parse(String(message.data));
+        } catch (error) {
+          console.warn("[realtime] malformed message", error);
+          return;
+        }
+
+        if (!isKnownRealtimeEvent(event)) {
+          console.warn("[realtime] unknown event", event);
+          return;
+        }
+
+        if (event.type === "realtime.ping") {
+          socket?.send(
+            JSON.stringify({
+              type: "realtime.pong",
+              payload: {
+                sentAt: event.payload.sentAt
+              }
+            })
+          );
+          return;
+        }
+
+        if (isServiceEvent(event)) {
+          return;
+        }
+
+        try {
+          callbackRef.current(event);
+        } catch (error) {
+          console.error("[realtime] event handler failed", error);
         }
       });
 
-      socket.addEventListener("close", () => {
-        setStatus("disconnected");
+      socket.addEventListener("close", (event) => {
+        clearHeartbeatTimer();
+        console.warn("[realtime] close", event.code, event.reason);
 
-        if (!closedByEffect) {
-          reconnectTimer = setTimeout(connect, 1500);
+        if (closedByEffect) {
+          setStatus("disconnected");
+          return;
         }
+
+        scheduleReconnect();
       });
 
-      socket.addEventListener("error", () => {
+      socket.addEventListener("error", (error) => {
+        console.error("[realtime] error", error);
         socket?.close();
       });
     }
@@ -122,10 +276,9 @@ export function useCampaignRealtime(
 
     return () => {
       closedByEffect = true;
-      if (reconnectTimer) {
-        clearTimeout(reconnectTimer);
-      }
-      socket?.close();
+      clearReconnectTimer();
+      clearHeartbeatTimer();
+      closeSocket();
     };
   }, [campaignId]);
 

@@ -6,7 +6,8 @@ import { canReceiveRealtimeEvent, RealtimeEvent } from "./events";
 type RealtimeSocket = {
   readyState: number;
   send: (payload: string) => void;
-  on: (event: "close" | "error", listener: () => void) => void;
+  on(event: "close", listener: (code?: number, reason?: Buffer) => void): void;
+  on(event: "error", listener: (error?: Error) => void): void;
 };
 
 const SOCKET_OPEN = 1;
@@ -51,7 +52,10 @@ export class RealtimeRooms {
     }
   }
 
-  broadcast(campaignId: string | number, event: RealtimeEvent) {
+  broadcast(campaignId: string | number, event: RealtimeEvent, logger?: {
+    debug: (payload: unknown, message?: string) => void;
+    warn: (payload: unknown, message?: string) => void;
+  }) {
     const room = this.rooms.get(roomName(campaignId));
 
     if (!room) {
@@ -59,15 +63,42 @@ export class RealtimeRooms {
     }
 
     const payload = JSON.stringify(event);
+    let delivered = 0;
 
     for (const client of room) {
-      if (
-        client.socket.readyState === SOCKET_OPEN &&
-        canReceiveRealtimeEvent(client.permissions, event, client.user.user_id)
-      ) {
-        client.socket.send(payload);
+      if (client.socket.readyState !== SOCKET_OPEN) {
+        this.leave(client);
+        continue;
+      }
+
+      if (canReceiveRealtimeEvent(client.permissions, event, client.user.user_id)) {
+        try {
+          client.socket.send(payload);
+          delivered++;
+        } catch (error) {
+          this.leave(client);
+          logger?.warn(
+            {
+              campaignId,
+              userId: client.user.user_id,
+              eventType: event.type,
+              error
+            },
+            "Realtime send failed; removed client"
+          );
+        }
       }
     }
+
+    logger?.debug(
+      {
+        campaignId,
+        eventType: event.type,
+        delivered,
+        roomSize: room.size
+      },
+      "Realtime broadcast completed"
+    );
   }
 
   count(campaignId: string | number) {

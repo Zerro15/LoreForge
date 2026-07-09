@@ -8,7 +8,10 @@ export type RealtimeEventType =
   | "player.moved"
   | "vision.updated"
   | "chat.message.created"
-  | "dice.rolled";
+  | "dice.rolled"
+  | "realtime.ping"
+  | "realtime.pong"
+  | "realtime.connected";
 
 export type SceneChangedEvent = {
   type: "scene.changed";
@@ -72,13 +75,39 @@ export type VisionUpdatedEvent = {
   };
 };
 
+export type RealtimePingEvent = {
+  type: "realtime.ping";
+  payload: {
+    sentAt: string;
+  };
+};
+
+export type RealtimePongEvent = {
+  type: "realtime.pong";
+  payload: {
+    sentAt: string;
+  };
+};
+
+export type RealtimeConnectedEvent = {
+  type: "realtime.connected";
+  payload: {
+    campaignId: string;
+    room: string;
+    clients: number;
+  };
+};
+
 export type RealtimeEvent =
   | SceneChangedEvent
   | TokenEvent
   | PlayerMovedEvent
   | VisionUpdatedEvent
   | ChatMessageCreatedEvent
-  | DiceRolledEvent;
+  | DiceRolledEvent
+  | RealtimePingEvent
+  | RealtimePongEvent
+  | RealtimeConnectedEvent;
 
 export function canReceiveRealtimeEvent(
   permissions: CurrentMemberPermissions,
@@ -86,6 +115,14 @@ export function canReceiveRealtimeEvent(
   userId?: string | number
 ) {
   if (permissions.canViewGMSecrets) {
+    return true;
+  }
+
+  if (
+    event.type === "realtime.ping" ||
+    event.type === "realtime.pong" ||
+    event.type === "realtime.connected"
+  ) {
     return true;
   }
 

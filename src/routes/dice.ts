@@ -208,24 +208,32 @@ export async function diceRoutes(app: FastifyInstance) {
       };
     });
 
-    realtimeRooms.broadcast(campaignId, {
-      type: "dice.rolled",
-      payload: {
-        campaignId: String(campaignId),
-        rollId: String(inserted.roll.roll_id),
-        messageId: String(inserted.message.message_id),
-        visibility: inserted.roll.visibility as string
-      }
-    });
+    realtimeRooms.broadcast(
+      campaignId,
+      {
+        type: "dice.rolled",
+        payload: {
+          campaignId: String(campaignId),
+          rollId: String(inserted.roll.roll_id),
+          messageId: String(inserted.message.message_id),
+          visibility: inserted.roll.visibility as string
+        }
+      },
+      request.log
+    );
 
-    realtimeRooms.broadcast(campaignId, {
-      type: "chat.message.created",
-      payload: {
-        campaignId: String(campaignId),
-        messageId: String(inserted.message.message_id),
-        visibility: inserted.message.visibility as string
-      }
-    });
+    realtimeRooms.broadcast(
+      campaignId,
+      {
+        type: "chat.message.created",
+        payload: {
+          campaignId: String(campaignId),
+          messageId: String(inserted.message.message_id),
+          visibility: inserted.message.visibility as string
+        }
+      },
+      request.log
+    );
 
     return inserted;
   });

@@ -53,17 +53,21 @@ export async function tokensRoutes(app: FastifyInstance) {
       body
     );
 
-    realtimeRooms.broadcast(campaignId, {
-      type: "token.created",
-      payload: {
-        campaignId: String(campaignId),
-        tokenId: String(token.scene_token_id),
-        sceneId: String(token.scene_id),
-        x: token.x as string | number,
-        y: token.y as string | number,
-        visibility: token.visibility as "public" | "gm_only" | "hidden"
-      }
-    });
+    realtimeRooms.broadcast(
+      campaignId,
+      {
+        type: "token.created",
+        payload: {
+          campaignId: String(campaignId),
+          tokenId: String(token.scene_token_id),
+          sceneId: String(token.scene_id),
+          x: token.x as string | number,
+          y: token.y as string | number,
+          visibility: token.visibility as "public" | "gm_only" | "hidden"
+        }
+      },
+      request.log
+    );
 
     return reply.code(201).send(token);
   });
@@ -82,17 +86,21 @@ export async function tokensRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: "Token not found" });
     }
 
-    realtimeRooms.broadcast(campaignId, {
-      type: "token.updated",
-      payload: {
-        campaignId: String(campaignId),
-        tokenId: String(token.scene_token_id),
-        sceneId: String(token.scene_id),
-        x: token.x as string | number,
-        y: token.y as string | number,
-        visibility: token.visibility as "public" | "gm_only" | "hidden"
-      }
-    });
+    realtimeRooms.broadcast(
+      campaignId,
+      {
+        type: "token.updated",
+        payload: {
+          campaignId: String(campaignId),
+          tokenId: String(token.scene_token_id),
+          sceneId: String(token.scene_id),
+          x: token.x as string | number,
+          y: token.y as string | number,
+          visibility: token.visibility as "public" | "gm_only" | "hidden"
+        }
+      },
+      request.log
+    );
 
     return token;
   });
@@ -105,15 +113,19 @@ export async function tokensRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: "Token not found" });
     }
 
-    realtimeRooms.broadcast(campaignId, {
-      type: "token.deleted",
-      payload: {
-        campaignId: String(campaignId),
-        tokenId: String(token.scene_token_id),
-        sceneId: String(token.scene_id),
-        visibility: token.visibility as "public" | "gm_only" | "hidden"
-      }
-    });
+    realtimeRooms.broadcast(
+      campaignId,
+      {
+        type: "token.deleted",
+        payload: {
+          campaignId: String(campaignId),
+          tokenId: String(token.scene_token_id),
+          sceneId: String(token.scene_id),
+          visibility: token.visibility as "public" | "gm_only" | "hidden"
+        }
+      },
+      request.log
+    );
 
     return { ok: true, token };
   });

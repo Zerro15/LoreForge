@@ -52,15 +52,19 @@ export async function visionRoutes(app: FastifyInstance) {
       body
     );
 
-    realtimeRooms.broadcast(campaignId, {
-      type: "vision.updated",
-      payload: {
-        campaignId: String(campaignId),
-        sceneId: String(sceneId),
-        userId: String(body.userId),
-        visibilityData: visibility
-      }
-    });
+    realtimeRooms.broadcast(
+      campaignId,
+      {
+        type: "vision.updated",
+        payload: {
+          campaignId: String(campaignId),
+          sceneId: String(sceneId),
+          userId: String(body.userId),
+          visibilityData: visibility
+        }
+      },
+      request.log
+    );
 
     return {
       ok: true,
@@ -78,15 +82,19 @@ export async function visionRoutes(app: FastifyInstance) {
       userId
     );
 
-    realtimeRooms.broadcast(campaignId, {
-      type: "vision.updated",
-      payload: {
-        campaignId: String(campaignId),
-        sceneId: String(sceneId),
-        userId: String(userId),
-        visibilityData: visibility
-      }
-    });
+    realtimeRooms.broadcast(
+      campaignId,
+      {
+        type: "vision.updated",
+        payload: {
+          campaignId: String(campaignId),
+          sceneId: String(sceneId),
+          userId: String(userId),
+          visibilityData: visibility
+        }
+      },
+      request.log
+    );
 
     return {
       ok: true,
@@ -105,15 +113,19 @@ export async function visionRoutes(app: FastifyInstance) {
     );
 
     if (body.userId) {
-      realtimeRooms.broadcast(campaignId, {
-        type: "vision.updated",
-        payload: {
-          campaignId: String(campaignId),
-          sceneId: String(sceneId),
-          userId: String(body.userId),
-          visibilityData: visibility
-        }
-      });
+      realtimeRooms.broadcast(
+        campaignId,
+        {
+          type: "vision.updated",
+          payload: {
+            campaignId: String(campaignId),
+            sceneId: String(sceneId),
+            userId: String(body.userId),
+            visibilityData: visibility
+          }
+        },
+        request.log
+      );
     }
 
     return {

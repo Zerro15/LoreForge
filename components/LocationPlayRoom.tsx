@@ -1770,7 +1770,7 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
           tone={
             realtimeStatus === "connected"
               ? "green"
-              : realtimeStatus === "connecting"
+              : realtimeStatus === "connecting" || realtimeStatus === "reconnecting"
                 ? "gold"
                 : "danger"
           }
@@ -1780,6 +1780,8 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
             ? "Подключено"
             : realtimeStatus === "connecting"
               ? "Подключение..."
+              : realtimeStatus === "reconnecting"
+                ? "Переподключение..."
               : "Нет соединения"}
         </Badge>
       </div>

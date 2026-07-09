@@ -303,15 +303,19 @@ export async function scenesRoutes(app: FastifyInstance) {
       return activeScene;
     });
 
-    realtimeRooms.broadcast(campaignId, {
-      type: "scene.changed",
-      payload: {
-        campaignId: String(campaignId),
-        sceneId: String(scene.scene_id),
-        locationId: String(scene.location_id),
-        visibility: scene.visibility
-      }
-    });
+    realtimeRooms.broadcast(
+      campaignId,
+      {
+        type: "scene.changed",
+        payload: {
+          campaignId: String(campaignId),
+          sceneId: String(scene.scene_id),
+          locationId: String(scene.location_id),
+          visibility: scene.visibility
+        }
+      },
+      request.log
+    );
 
     return { ok: true, activeSceneId: String(scene.scene_id), activeLocationId: String(scene.location_id) };
   });
@@ -464,16 +468,20 @@ export async function scenesRoutes(app: FastifyInstance) {
       return scene;
     });
 
-    realtimeRooms.broadcast(campaignId, {
-      type: "player.moved",
-      payload: {
-        campaignId: String(campaignId),
-        userId: String(body.userId),
-        characterId: body.characterId ? String(body.characterId) : null,
-        sceneId: String(sceneId),
-        visibility: result.visibility
-      }
-    });
+    realtimeRooms.broadcast(
+      campaignId,
+      {
+        type: "player.moved",
+        payload: {
+          campaignId: String(campaignId),
+          userId: String(body.userId),
+          characterId: body.characterId ? String(body.characterId) : null,
+          sceneId: String(sceneId),
+          visibility: result.visibility
+        }
+      },
+      request.log
+    );
 
     return reply.code(200).send({ ok: true, scene: result });
   });
