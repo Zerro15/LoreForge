@@ -16,6 +16,7 @@ import { npcsRoutes } from "./routes/npcs";
 import { pluginsRoutes } from "./routes/plugins";
 import { scenesRoutes } from "./routes/scenes";
 import { sessionLogsRoutes } from "./routes/sessionLogs";
+import { tokensRoutes } from "./routes/tokens";
 
 const app = Fastify({
   logger: true
@@ -66,6 +67,17 @@ app.setErrorHandler((error, _request, reply) => {
     });
   }
 
+  const statusCode =
+    typeof (error as { statusCode?: unknown }).statusCode === "number"
+      ? (error as { statusCode: number }).statusCode
+      : null;
+
+  if (statusCode && statusCode >= 400 && statusCode < 500) {
+    return reply.code(statusCode).send({
+      error: error instanceof Error ? error.message : "Request error"
+    });
+  }
+
   app.log.error(error);
 
   return reply.code(500).send({
@@ -89,6 +101,7 @@ app.register(npcsRoutes);
 app.register(pluginsRoutes);
 app.register(scenesRoutes);
 app.register(sessionLogsRoutes);
+app.register(tokensRoutes);
 
 async function start() {
   const port = Number(process.env.PORT ?? 3001);

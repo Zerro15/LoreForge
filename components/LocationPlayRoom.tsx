@@ -20,7 +20,9 @@ import {
   activateScene,
   approveGmRequest,
   archiveLocation,
+  archiveSceneToken,
   archiveScene,
+  createSceneToken,
   createLocation,
   createScene,
   createTravelRequest,
@@ -31,11 +33,13 @@ import {
   getGmRequests,
   getLocations,
   getScenes,
+  getSceneTokens,
   grantLocationAccess,
   movePlayerToScene,
   rejectGmRequest,
   revokeLocationAccess,
   updateLocation,
+  updateSceneToken,
   uploadSceneImage,
   uploadLocationImage
 } from "@/lib/api";
@@ -49,6 +53,8 @@ import type {
   GMRequest,
   Location,
   Scene,
+  SceneToken,
+  TokenVisibility,
   Visibility
 } from "@/lib/types";
 import {
@@ -67,6 +73,7 @@ type PlayRoomState = {
   dashboard: Dashboard | null;
   locations: Location[];
   scenes: Scene[];
+  tokens: SceneToken[];
   characters: Character[];
   messages: ChatMessageType[];
   gmRequests: GMRequest[];
@@ -79,6 +86,14 @@ const visibilityOptions: Visibility[] = [
   "hidden_until_discovered",
   "gm_only"
 ];
+
+const tokenVisibilityOptions: TokenVisibility[] = ["public", "gm_only", "hidden"];
+
+const tokenVisibilityLabels: Record<TokenVisibility, string> = {
+  public: "Видно всем",
+  gm_only: "Только ГМ",
+  hidden: "Скрыто"
+};
 
 function resolveAssetUrl(url?: string | null) {
   if (!url) {
@@ -184,11 +199,17 @@ export function LocationImageCard({ location }: { location: Location | null }) {
 export function SceneImageCard({
   scene,
   location,
-  isGm
+  isGm,
+  tokens,
+  campaignId,
+  onTokensChanged
 }: {
   scene: Scene | null;
   location: Location | null;
   isGm: boolean;
+  tokens: SceneToken[];
+  campaignId: string;
+  onTokensChanged: () => void;
 }) {
   const imageUrl = resolveAssetUrl(scene?.image?.attachment?.public_url);
 
@@ -208,7 +229,7 @@ export function SceneImageCard({
       <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F17] via-[#0B0F17]/28 to-[#0B0F17]/10" />
 
       {isGm ? (
-        <div className="absolute right-4 top-4 rounded-2xl border border-[#273244] bg-[#0B0F17]/80 p-3 text-xs text-[#c7ccd6] shadow-xl backdrop-blur">
+        <div className="absolute right-4 top-4 z-20 rounded-2xl border border-[#273244] bg-[#0B0F17]/80 p-3 text-xs text-[#c7ccd6] shadow-xl backdrop-blur">
           <div className="mb-2 font-semibold text-[#F5F2EA]">NPC-инструменты</div>
           <div className="space-y-1">
             <div>Маркеры NPC: видны только ГМу</div>
@@ -217,7 +238,15 @@ export function SceneImageCard({
         </div>
       ) : null}
 
-      <div className="relative flex min-h-[620px] flex-col justify-end p-7">
+      <TokenLayer
+        campaignId={campaignId}
+        isGm={isGm}
+        onChanged={onTokensChanged}
+        scene={scene}
+        tokens={tokens}
+      />
+
+      <div className="relative z-20 flex min-h-[620px] flex-col justify-end p-7">
         <div className="flex flex-wrap gap-2">
           <Badge tone="purple">Сцена</Badge>
           {scene?.is_current_for_user ? <Badge tone="green">Вы здесь</Badge> : null}
@@ -247,6 +276,201 @@ export function SceneImageCard({
           </div>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+export function TokenLayer({
+  campaignId,
+  scene,
+  tokens,
+  isGm,
+  onChanged
+}: {
+  campaignId: string;
+  scene: Scene | null;
+  tokens: SceneToken[];
+  isGm: boolean;
+  onChanged: () => void;
+}) {
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [label, setLabel] = useState("");
+  const [visibility, setVisibility] = useState<TokenVisibility>("public");
+  const [error, setError] = useState<string | null>(null);
+
+  async function createMarker() {
+    if (!scene) {
+      return;
+    }
+
+    const result = await createSceneToken(campaignId, scene.scene_id, {
+      entityType: "marker",
+      label: label || "Объект",
+      x: 50,
+      y: 50,
+      size: 0.9,
+      visibility
+    });
+
+    setError(result.error);
+    if (!result.error) {
+      setLabel("");
+      onChanged();
+    }
+  }
+
+  async function updateTokenPosition(
+    token: SceneToken,
+    event: React.PointerEvent<HTMLDivElement>
+  ) {
+    if (!isGm || !draggingId) {
+      return;
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = Math.min(100, Math.max(0, ((event.clientX - rect.left) / rect.width) * 100));
+    const y = Math.min(100, Math.max(0, ((event.clientY - rect.top) / rect.height) * 100));
+
+    const result = await updateSceneToken(campaignId, token.scene_token_id, {
+      x: Number(x.toFixed(2)),
+      y: Number(y.toFixed(2))
+    });
+
+    setDraggingId(null);
+    setError(result.error);
+    if (!result.error) {
+      onChanged();
+    }
+  }
+
+  async function setTokenVisibility(token: SceneToken, value: TokenVisibility) {
+    const result = await updateSceneToken(campaignId, token.scene_token_id, {
+      visibility: value
+    });
+    setError(result.error);
+    if (!result.error) {
+      onChanged();
+    }
+  }
+
+  async function archive(token: SceneToken) {
+    const result = await archiveSceneToken(campaignId, token.scene_token_id);
+    setError(result.error);
+    if (!result.error) {
+      onChanged();
+    }
+  }
+
+  return (
+    <div
+      className="absolute inset-0 z-10"
+      onPointerUp={(event) => {
+        const token = tokens.find((item) => item.scene_token_id === draggingId);
+        if (token) {
+          void updateTokenPosition(token, event);
+        }
+      }}
+    >
+      {tokens.map((token) => {
+        const size = Number(token.size) || 1;
+        const x = Number(token.x);
+        const y = Number(token.y);
+        const labelText = token.label ?? token.entity?.name ?? "Объект";
+        const isSecret = token.visibility !== "public";
+
+        return (
+          <div
+            className="group absolute -translate-x-1/2 -translate-y-1/2"
+            key={token.scene_token_id}
+            onPointerDown={(event) => {
+              if (!isGm) {
+                return;
+              }
+              event.currentTarget.setPointerCapture(event.pointerId);
+              setDraggingId(token.scene_token_id);
+            }}
+            style={{
+              left: `${x}%`,
+              top: `${y}%`
+            }}
+          >
+            <div
+              className={`flex items-center justify-center rounded-full border shadow-2xl backdrop-blur ${
+                isSecret
+                  ? "border-[#D6A84F]/70 bg-[#D6A84F]/20 text-[#f0dca8]"
+                  : "border-[#8B5CF6]/70 bg-[#5B21B6]/70 text-white"
+              }`}
+              style={{
+                height: `${Math.max(30, size * 42)}px`,
+                width: `${Math.max(30, size * 42)}px`
+              }}
+            >
+              {token.entity_type === "marker" ? <MapPinned size={16} /> : labelText.slice(0, 1)}
+            </div>
+            <div className="pointer-events-none mt-1 rounded-full border border-[#273244] bg-[#0B0F17]/80 px-2 py-0.5 text-center text-[11px] text-[#F5F2EA] shadow-lg">
+              {labelText}
+            </div>
+
+            {isGm ? (
+              <div className="absolute left-1/2 top-full mt-2 hidden w-44 -translate-x-1/2 rounded-2xl border border-[#273244] bg-[#111827]/95 p-2 text-xs shadow-xl group-hover:block">
+                <select
+                  className="mb-2 h-8 w-full rounded-lg border border-[#273244] bg-[#0B0F17] px-2"
+                  onChange={(event) =>
+                    void setTokenVisibility(
+                      token,
+                      event.target.value as TokenVisibility
+                    )
+                  }
+                  value={token.visibility}
+                >
+                  {tokenVisibilityOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {tokenVisibilityLabels[option]}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  onClick={() => void archive(token)}
+                  type="button"
+                  variant="danger"
+                >
+                  <Archive size={13} />
+                  Удалить
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+
+      {isGm && scene ? (
+        <div className="absolute left-4 top-4 w-64 rounded-2xl border border-[#273244] bg-[#0B0F17]/82 p-3 shadow-xl backdrop-blur">
+          <div className="mb-2 text-sm font-semibold">Объекты карты</div>
+          <div className="grid gap-2">
+            <Input
+              onChange={(event) => setLabel(event.target.value)}
+              placeholder="Название объекта"
+              value={label}
+            />
+            <select
+              className="h-10 rounded-xl border border-[#273244] bg-[#0B0F17] px-3 text-sm"
+              onChange={(event) => setVisibility(event.target.value as TokenVisibility)}
+              value={visibility}
+            >
+              {tokenVisibilityOptions.map((option) => (
+                <option key={option} value={option}>
+                  {tokenVisibilityLabels[option]}
+                </option>
+              ))}
+            </select>
+            <Button onClick={() => void createMarker()} type="button">
+              <Plus size={14} />
+              Добавить объект
+            </Button>
+            {error ? <p className="text-xs text-[#e89a9a]">{error}</p> : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1134,6 +1358,7 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
     dashboard: null,
     locations: [],
     scenes: [],
+    tokens: [],
     characters: [],
     messages: [],
     gmRequests: [],
@@ -1203,10 +1428,27 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
       dashboard: dashboard.data,
       locations: locations.data ?? [],
       scenes: scenes.data ?? [],
+      tokens: [],
       characters: characters.data ?? [],
       messages: messages.data ?? [],
       gmRequests: []
     };
+
+    const nextActiveScene =
+      nextState.scenes.find((scene) => scene.is_active_scene) ??
+      nextState.scenes.find((scene) => scene.is_current_for_user) ??
+      nextState.scenes[0] ??
+      null;
+
+    if (nextActiveScene) {
+      const tokens = await getSceneTokens(campaignId, nextActiveScene.scene_id);
+      if (tokens.error) {
+        setError(tokens.error);
+        setLoading(false);
+        return;
+      }
+      nextState.tokens = tokens.data ?? [];
+    }
 
     if (dashboard.data?.currentMember.canApproveGMRequests) {
       const gmRequests = await getGmRequests(campaignId);
@@ -1241,9 +1483,12 @@ export function GameWorkspace({ campaignId }: { campaignId: string }) {
         <div className="space-y-4">
           <Card className="overflow-hidden p-3">
             <SceneImageCard
+              campaignId={campaignId}
               isGm={isGm}
               location={sceneLocation}
+              onTokensChanged={() => void loadData()}
               scene={activeScene}
+              tokens={state.tokens}
             />
             <div className="mt-4 flex flex-col justify-between gap-3 px-2 pb-2 md:flex-row md:items-center">
               <div>

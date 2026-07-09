@@ -47,6 +47,7 @@ LoreForge собирает кампанию в единую систему:
 - Demo-кампания `Туман над Баклундом`.
 - Активный world plugin `Mistbound`.
 - Play Room: активная сцена, локации, чат, кубики и запросы переходов.
+- Базовый VTT-слой: токены персонажей, NPC и маркеры поверх карты сцены.
 - Карточки персонажей с путём, последовательностью, духовностью, рассудком, усвоением и риском потери контроля.
 - NPC dossier cards с публичным описанием, тегами и `SecretBlock`.
 - Иерархия локаций, сцены внутри локаций, загрузка карт и выдача доступа игрокам.
@@ -221,6 +222,10 @@ alice@example.com / password123
 - `POST /api/campaigns/:campaignId/scenes/:sceneId/activate`
 - `POST /api/campaigns/:campaignId/scenes/:sceneId/image`
 - `POST /api/campaigns/:campaignId/scenes/:sceneId/move-player`
+- `GET /api/campaigns/:campaignId/scenes/:sceneId/tokens`
+- `POST /api/campaigns/:campaignId/scenes/:sceneId/tokens`
+- `PATCH /api/campaigns/:campaignId/tokens/:tokenId`
+- `DELETE /api/campaigns/:campaignId/tokens/:tokenId`
 - `GET /api/campaigns/:campaignId/chat`
 - `POST /api/campaigns/:campaignId/dice-roll`
 - `GET /api/campaigns/:campaignId/session-log`
@@ -239,6 +244,7 @@ alice@example.com / password123
 - [docs/roadmap.md](docs/roadmap.md) — roadmap.
 - [docs/frontend.md](docs/frontend.md) — frontend.
 - [docs/backend-api.md](docs/backend-api.md) — backend API.
+- [docs/tokens.md](docs/tokens.md) — токены карты и базовый VTT-слой.
 - [docs/deployment-split.md](docs/deployment-split.md) — план будущего split frontend/backend.
 - [docs/access-control.md](docs/access-control.md) — роли и права доступа.
 - [docs/manual-role-test.md](docs/manual-role-test.md) — ручная проверка ролей.

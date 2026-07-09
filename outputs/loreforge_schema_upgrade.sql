@@ -894,6 +894,41 @@ CREATE TABLE IF NOT EXISTS audit_log (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- 14.1. Scene map tokens for the VTT play room.
+
+CREATE TABLE IF NOT EXISTS scene_token (
+    scene_token_id BIGSERIAL PRIMARY KEY,
+    scene_id BIGINT NOT NULL REFERENCES scene(scene_id) ON DELETE CASCADE,
+    campaign_id BIGINT NOT NULL REFERENCES campaign(campaign_id) ON DELETE CASCADE,
+    entity_type TEXT NOT NULL,
+    entity_id BIGINT,
+    x NUMERIC(7, 3) NOT NULL DEFAULT 50,
+    y NUMERIC(7, 3) NOT NULL DEFAULT 50,
+    image_attachment_id BIGINT REFERENCES attachment(attachment_id) ON DELETE SET NULL,
+    label TEXT,
+    size NUMERIC(6, 2) NOT NULL DEFAULT 1,
+    visibility TEXT NOT NULL DEFAULT 'public',
+    status TEXT NOT NULL DEFAULT 'active',
+    created_by_user_id BIGINT REFERENCES app_user(user_id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT scene_token_entity_type_check
+        CHECK (entity_type IN ('character', 'npc', 'marker')),
+    CONSTRAINT scene_token_visibility_check
+        CHECK (visibility IN ('public', 'gm_only', 'hidden')),
+    CONSTRAINT scene_token_status_check
+        CHECK (status IN ('active', 'archived')),
+    CONSTRAINT scene_token_position_check
+        CHECK (x >= 0 AND x <= 100 AND y >= 0 AND y <= 100),
+    CONSTRAINT scene_token_size_check
+        CHECK (size > 0 AND size <= 10),
+    CONSTRAINT scene_token_entity_required_check
+        CHECK (
+            (entity_type IN ('character', 'npc') AND entity_id IS NOT NULL)
+            OR (entity_type = 'marker')
+        )
+);
+
 -- 15. Indexes for new access patterns.
 
 CREATE INDEX IF NOT EXISTS idx_campaign_status ON campaign(status);
@@ -912,6 +947,9 @@ CREATE INDEX IF NOT EXISTS idx_location_event_expires_at ON location(is_event_lo
 CREATE INDEX IF NOT EXISTS idx_scene_campaign_location_status ON scene(campaign_id, location_id, status);
 CREATE INDEX IF NOT EXISTS idx_scene_visibility ON scene(campaign_id, visibility);
 CREATE INDEX IF NOT EXISTS idx_scene_player_state_user ON scene_player_state(user_id, familiarity_state);
+CREATE INDEX IF NOT EXISTS idx_scene_token_scene_id ON scene_token(scene_id, status);
+CREATE INDEX IF NOT EXISTS idx_scene_token_campaign_id ON scene_token(campaign_id, status);
+CREATE INDEX IF NOT EXISTS idx_scene_token_entity ON scene_token(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_item_campaign_visibility ON item(campaign_id, visibility);
 CREATE INDEX IF NOT EXISTS idx_attachment_campaign_visibility ON attachment(campaign_id, visibility);
 CREATE INDEX IF NOT EXISTS idx_attachment_campaign_storage ON attachment(campaign_id, storage_kind);

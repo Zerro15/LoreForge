@@ -8,7 +8,9 @@ import type {
   Location,
   Npc,
   Scene,
+  SceneToken,
   SessionLog,
+  TokenVisibility,
   Tag,
   Visibility,
   WorldPlugin
@@ -403,6 +405,63 @@ export function movePlayerToScene(
         "content-type": "application/json"
       },
       body: JSON.stringify(body)
+    }
+  );
+}
+
+export type SceneTokenInput = {
+  entityType: "character" | "npc" | "marker";
+  entityId?: number | null;
+  x?: number;
+  y?: number;
+  label?: string | null;
+  size?: number;
+  visibility?: TokenVisibility;
+  imageAttachmentId?: number | null;
+};
+
+export function getSceneTokens(campaignId: string, sceneId: string) {
+  return requestApi<SceneToken[]>(
+    `/api/campaigns/${campaignId}/scenes/${sceneId}/tokens`
+  );
+}
+
+export function createSceneToken(
+  campaignId: string,
+  sceneId: string,
+  body: SceneTokenInput
+) {
+  return requestApi<SceneToken>(
+    `/api/campaigns/${campaignId}/scenes/${sceneId}/tokens`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(body)
+    }
+  );
+}
+
+export function updateSceneToken(
+  campaignId: string,
+  tokenId: string,
+  body: Partial<Pick<SceneTokenInput, "x" | "y" | "label" | "size" | "visibility">>
+) {
+  return requestApi<SceneToken>(`/api/campaigns/${campaignId}/tokens/${tokenId}`, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+}
+
+export function archiveSceneToken(campaignId: string, tokenId: string) {
+  return requestApi<{ ok: true; token: SceneToken }>(
+    `/api/campaigns/${campaignId}/tokens/${tokenId}`,
+    {
+      method: "DELETE"
     }
   );
 }

@@ -1,5 +1,6 @@
 import { PoolClient } from "pg";
 import { LocationService } from "./LocationService";
+import { TokenService } from "./TokenService";
 
 export class SceneService {
   static async setActiveScene(
@@ -188,6 +189,13 @@ export class SceneService {
           options.characterId
         ]
       );
+
+      await TokenService.ensureCharacterTokenForScene(client, {
+        campaignId: options.campaignId,
+        sceneId: options.sceneId,
+        characterId: options.characterId,
+        createdByUserId: options.gmUserId
+      });
     }
 
     await LocationService.writeLocationEvent(client, {

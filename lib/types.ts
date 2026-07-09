@@ -221,6 +221,32 @@ export type Scene = {
   } | null;
 };
 
+export type TokenVisibility = "public" | "gm_only" | "hidden";
+
+export type SceneToken = {
+  scene_token_id: string;
+  scene_id: string;
+  campaign_id: string;
+  entity_type: "character" | "npc" | "marker";
+  entity_id: string | null;
+  x: string | number;
+  y: string | number;
+  image_attachment_id: string | null;
+  label: string | null;
+  size: string | number;
+  visibility: TokenVisibility;
+  status: "active" | "archived";
+  created_by_user_id: string | null;
+  created_at: string;
+  updated_at: string;
+  entity?: {
+    entity_type: "character" | "npc";
+    entity_id: string;
+    name: string;
+  } | null;
+  image_attachment?: Attachment | null;
+};
+
 export type Attachment = {
   attachment_id: string;
   filename: string;
