@@ -1,11 +1,16 @@
 # LoreForge
 
-LoreForge — это Campaign OS для мастеров настольных RPG: платформа, которая объединяет кампании, персонажей, NPC, локации, чат, кубики, журнал, секреты ГМа, расследования и подключаемые плагины миров.
+> **Campaign OS для мастеров настольных RPG.** Кампания, персонажи, NPC, локации, сцены и секреты ГМа — в одном пространстве, с поддержкой разных игровых миров.
 
-```text
-LoreForge = Roll20 + Notion для ГМа + плагины миров
-```
+[![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-111111?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![Fastify](https://img.shields.io/badge/Fastify-API-202020?logo=fastify&logoColor=white)](https://fastify.dev/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Статус](https://img.shields.io/badge/статус-MVP%20prototype-8B5CF6)](#статус-проекта)
 
+[Возможности](#ключевые-фичи) · [Быстрый запуск](#быстрый-запуск) · [Архитектура](docs/architecture.md) · [План развития](docs/roadmap.md)
+
+LoreForge объединяет кампании, персонажей, NPC, локации, чат, кубики, журнал, секреты ГМа, расследования и подключаемые плагины миров.
 ## Суть продукта
 
 LoreForge помогает мастеру не просто играть онлайн, а управлять живым миром кампании: лором, правилами, персонажами, событиями, секретами и структурой мира.
