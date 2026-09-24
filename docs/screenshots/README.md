@@ -1,34 +1,11 @@
-# Screenshots для презентации
+# Screenshots
 
-Скриншоты лучше сделать вручную после запуска демо, чтобы зафиксировать актуальный вид интерфейса на нужном разрешении.
+Screenshots below show the seeded `Туман над Баклундом` demo at a 1440 px desktop viewport.
 
-## Как запустить
+| Screenshot | What it shows |
+| --- | --- |
+| [`campaigns.png`](campaigns.png) | Campaign list, current world, and party/content counts. |
+| [`dashboard.png`](dashboard.png) | Game room, scene map, party chat, locations, and session scenes. |
+| [`npcs.png`](npcs.png) | NPC dossiers, visibility labels, and GM-only secrets. |
 
-```powershell
-docker compose up -d
-.\scripts\db\reset-dev-db.ps1
-pnpm dev
-```
-
-Открыть:
-
-```text
-http://localhost:3000/login
-```
-
-## Какие скриншоты сделать
-
-- `login.png` — страница входа.
-- `campaigns.png` — список кампаний.
-- `dashboard.png` — dashboard кампании `Туман над Баклундом`.
-- `characters.png` — персонажи с ресурсами Mistbound.
-- `npc.png` — NPC dossier и SecretBlock.
-- `chat.png` — чат с dice-сообщением.
-- `session-log.png` — timeline журнала сессии.
-
-## Рекомендации
-
-- Использовать desktop viewport примерно `1440x900`.
-- Перед скриншотом чата нажать быстрый бросок `1d20`.
-- Не показывать лишние окна IDE или терминала.
-- Проверить, что виден тёмный фон, glass cards и purple glow.
+The screenshots use the built-in demo campaign. For the setup and demo flow, see [`../demo-flow.md`](../demo-flow.md) and the [quick start](../../README.md#быстрый-запуск).
